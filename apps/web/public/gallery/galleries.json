@@ -1,0 +1,74 @@
+[
+  {
+    "slug": "streets",
+    "title": "Streets",
+    "images": [
+      "streets-1.jpg",
+      "streets-2.jpg",
+      "streets-3.jpg",
+      "streets-4.jpg",
+      "streets-5.jpg",
+      "streets-6.jpg"
+    ]
+  },
+  {
+    "slug": "faces",
+    "title": "Faces",
+    "images": [
+      "faces-1.jpg",
+      "faces-2.jpg",
+      "faces-3.jpg",
+      "faces-4.jpg",
+      "faces-5.jpg",
+      "faces-6.jpg"
+    ]
+  },
+  {
+    "slug": "light-and-shadow",
+    "title": "Light & Shadow",
+    "images": [
+      "light-and-shadow-1.jpg",
+      "light-and-shadow-2.jpg",
+      "light-and-shadow-3.jpg",
+      "light-and-shadow-4.jpg",
+      "light-and-shadow-5.jpg",
+      "light-and-shadow-6.jpg"
+    ]
+  },
+  {
+    "slug": "seaside",
+    "title": "Seaside",
+    "images": [
+      "seaside-1.jpg",
+      "seaside-2.jpg",
+      "seaside-3.jpg",
+      "seaside-4.jpg",
+      "seaside-5.jpg",
+      "seaside-6.jpg"
+    ]
+  },
+  {
+    "slug": "still-life",
+    "title": "Still Life",
+    "images": [
+      "still-life-1.jpg",
+      "still-life-2.jpg",
+      "still-life-3.jpg",
+      "still-life-4.jpg",
+      "still-life-5.jpg",
+      "still-life-6.jpg"
+    ]
+  },
+  {
+    "slug": "family",
+    "title": "Family",
+    "images": [
+      "family-1.jpg",
+      "family-2.jpg",
+      "family-3.jpg",
+      "family-4.jpg",
+      "family-5.jpg",
+      "family-6.jpg"
+    ]
+  }
+]
