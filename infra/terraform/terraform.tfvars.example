@@ -1,6 +1,6 @@
 # Copy to terraform.tfvars (git-ignored) and fill in real values before applying.
 
-project_id       = "memorial-site"
+project_id       = "memorial-site-oded"
 region           = "me-west1"
 db_instance_name = "my-db"
 db_tier          = "db-f1-micro"   # db-g1-small or larger for production

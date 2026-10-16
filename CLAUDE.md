@@ -191,7 +191,7 @@ Services that require extra system packages (e.g. `ffmpeg`) add the `apk add` li
 ## Deployment
 
 - Region: **me-west1** (Tel Aviv).
-- GCP project: **memorial-site** (project id `memorial-site`).
+- GCP project: **memorial-site** (project id `memorial-site-oded`).
 - Every service has its own **Cloud Run** instance.
 - Images tagged with the **git SHA**.
 - Secrets via **GCP Secret Manager** — never passed as plain environment variables.

@@ -1,5 +1,5 @@
 # Variables - Update these!
-PROJECT_ID="memorial-site"
+PROJECT_ID="memorial-site-oded"
 GITHUB_REPO="odedlevinger/memorial-site"
 POOL_ID="github-pool"
 PROVIDER_ID="github-provider"

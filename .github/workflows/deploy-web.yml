@@ -21,13 +21,13 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GCP_PROJECT_ID: memorial-site
+  GCP_PROJECT_ID: memorial-site-oded
   GCP_REGION: me-west1
   AR_REPO: memorial-site
   IMAGE_NAME: web
   CLOUD_RUN_SERVICE: memorial-site-web         # name fronted by infra/terraform/web-load-balancer.tf
-  WIF_PROVIDER: projects/YOUR_GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider
-  DEPLOY_SA: terraform-runner@memorial-site.iam.gserviceaccount.com
+  WIF_PROVIDER: projects/698365944661/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  DEPLOY_SA: terraform-runner@memorial-site-oded.iam.gserviceaccount.com
 
 jobs:
   deploy:
