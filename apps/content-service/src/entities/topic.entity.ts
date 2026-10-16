@@ -16,7 +16,7 @@ export class TopicEntity {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   coverPictureId!: string | null;
 
   @Column({ type: 'int', default: 0 })

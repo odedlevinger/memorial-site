@@ -15,7 +15,7 @@ export class PictureEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', length: 36 })
+  @Column({ type: 'uuid' })
   topicId!: string;
 
   @ManyToOne(() => TopicEntity, (t) => t.pictures, { onDelete: 'CASCADE' })
