@@ -8,8 +8,13 @@ type State =
   | { readonly status: 'anon' }
   | { readonly status: 'authed'; readonly user: AuthUser };
 
+interface AccountProps {
+  /** Called after sign-in / sign-out so the app can re-check the back-office role. */
+  readonly onSessionChange?: () => void;
+}
+
 /** Google sign-in wired to the auth-service through the Kong gateway. */
-export function Account(): ReactElement {
+export function Account({ onSessionChange }: AccountProps): ReactElement {
   const [state, setState] = useState<State>({ status: 'loading' });
 
   useEffect(() => {
@@ -29,7 +34,10 @@ export function Account(): ReactElement {
 
   if (state.status === 'authed') {
     const onLogout = (): void => {
-      void logout().then(() => setState({ status: 'anon' }));
+      void logout().then(() => {
+        setState({ status: 'anon' });
+        onSessionChange?.();
+      });
     };
     return (
       <article className="prose-page account">
@@ -44,7 +52,12 @@ export function Account(): ReactElement {
     <article className="prose-page account">
       <h1 className="page-title">Sign in</h1>
       <p>Family members can sign in to add photographs and memories.</p>
-      <Login onSignedIn={(user) => setState({ status: 'authed', user })} />
+      <Login
+        onSignedIn={(user) => {
+          setState({ status: 'authed', user });
+          onSessionChange?.();
+        }}
+      />
     </article>
   );
 }

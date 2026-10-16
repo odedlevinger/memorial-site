@@ -13,6 +13,12 @@ describe('parseRoute', () => {
     ['#/galleries/a/b', { page: 'not-found' }],
     ['#/about/extra', { page: 'not-found' }],
     ['#/nope', { page: 'not-found' }],
+    ['#/admin', { page: 'admin' }],
+    ['#/admin/editors', { page: 'admin-editors' }],
+    ['#/admin/topics/t1', { page: 'admin-topic', id: 't1' }],
+    ['#/admin/topics', { page: 'not-found' }],
+    ['#/admin/nope', { page: 'not-found' }],
+    ['#/admin/topics/t1/x', { page: 'not-found' }],
   ])('%s', (hash, expected) => {
     expect(parseRoute(hash)).toEqual(expected);
   });
@@ -24,6 +30,9 @@ describe('hrefFor', () => {
     expect(hrefFor({ page: 'gallery', slug: 'faces' })).toBe('#/galleries/faces');
     expect(hrefFor({ page: 'about' })).toBe('#/about');
     expect(hrefFor({ page: 'not-found' })).toBe('#/');
+    expect(hrefFor({ page: 'admin' })).toBe('#/admin');
+    expect(hrefFor({ page: 'admin-editors' })).toBe('#/admin/editors');
+    expect(hrefFor({ page: 'admin-topic', id: 't1' })).toBe('#/admin/topics/t1');
   });
 });
 

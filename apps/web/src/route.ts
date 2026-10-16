@@ -9,6 +9,9 @@ export type Route =
   | { readonly page: 'about' }
   | { readonly page: 'contact' }
   | { readonly page: 'account' }
+  | { readonly page: 'admin' }
+  | { readonly page: 'admin-topic'; readonly id: string }
+  | { readonly page: 'admin-editors' }
   | { readonly page: 'not-found' };
 
 export function parseRoute(hash: string): Route {
@@ -16,6 +19,11 @@ export function parseRoute(hash: string): Route {
   if (parts.length === 0) return { page: 'home' };
   const [head, slug] = parts;
   if (head === 'galleries' && slug && parts.length === 2) return { page: 'gallery', slug };
+  if (head === 'admin') {
+    if (parts.length === 1) return { page: 'admin' };
+    if (parts.length === 2 && slug === 'editors') return { page: 'admin-editors' };
+    if (parts.length === 3 && slug === 'topics' && parts[2]) return { page: 'admin-topic', id: parts[2] };
+  }
   if (parts.length === 1 && (head === 'about' || head === 'contact' || head === 'account')) {
     return { page: head };
   }
@@ -28,6 +36,10 @@ export function hrefFor(route: Route): string {
       return '#/';
     case 'gallery':
       return `#/galleries/${route.slug}`;
+    case 'admin-topic':
+      return `#/admin/topics/${route.id}`;
+    case 'admin-editors':
+      return '#/admin/editors';
     case 'not-found':
       return '#/';
     default:

@@ -39,5 +39,35 @@ resource "google_cloud_run_service_iam_binding" "auth_service_invoker" {
   members = [
     "serviceAccount:${google_service_account.kong_gateway.email}",
     "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com",
+    # content-service maps Kong's X-User-Id → email via auth-service's internal user lookup.
+    "serviceAccount:${google_service_account.content_service.email}",
+  ]
+}
+
+# ── content-service ────────────────────────────────────────────────────────────
+# Runtime identity for the content-service Cloud Run service (deploy-content-service.yml).
+
+resource "google_service_account" "content_service" {
+  account_id   = "content-service"
+  display_name = "Content Service"
+  description  = "Runs content-service: Cloud SQL, the photos bucket, and auth-service user lookups"
+}
+
+resource "google_project_iam_member" "content_service_roles" {
+  for_each = toset(["roles/cloudsql.client", "roles/logging.logWriter"])
+  project  = var.project_id
+  role     = each.value
+  member   = "serviceAccount:${google_service_account.content_service.email}"
+}
+
+# Only Kong may call content-service (it is deployed with --no-allow-unauthenticated).
+resource "google_cloud_run_service_iam_binding" "content_service_invoker" {
+  count    = var.enable_content_service_iam ? 1 : 0
+  service  = "memorial-site-content"
+  location = var.region
+  role     = "roles/run.invoker"
+
+  members = [
+    "serviceAccount:${google_service_account.kong_gateway.email}",
   ]
 }

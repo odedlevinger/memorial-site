@@ -5,11 +5,12 @@ import {
   Image,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { imageUrl, type Gallery } from './galleries';
+import { pictureMeta, type Topic, type TopicDetail } from './galleries';
 import { colors, serif } from './theme';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -25,24 +26,21 @@ export function Wordmark(): ReactElement {
 }
 
 interface HomeProps {
-  readonly origin: string;
-  readonly galleries: readonly Gallery[];
-  readonly onOpen: (gallery: Gallery) => void;
+  readonly topics: readonly Topic[];
+  readonly onOpen: (topic: Topic) => void;
 }
 
-export function HomeScreen({ origin, galleries, onOpen }: HomeProps): ReactElement {
+export function HomeScreen({ topics, onOpen }: HomeProps): ReactElement {
   return (
     <FlatList
-      data={galleries}
-      keyExtractor={(g): string => g.slug}
+      data={topics}
+      keyExtractor={(t): string => t.id}
       ListHeaderComponent={Wordmark}
       ListEmptyComponent={<Text style={styles.empty}>No galleries yet.</Text>}
       contentContainerStyle={styles.list}
       renderItem={({ item }): ReactElement => (
         <Pressable style={styles.tile} onPress={(): void => onOpen(item)} accessibilityRole="link">
-          {item.images[0] !== undefined && (
-            <Image source={{ uri: imageUrl(origin, item.images[0]) }} style={styles.tileImage} />
-          )}
+          {item.cover && <Image source={{ uri: item.cover.display }} style={styles.tileImage} />}
           <Text style={styles.tileTitle}>{item.title}</Text>
         </Pressable>
       )}
@@ -51,20 +49,19 @@ export function HomeScreen({ origin, galleries, onOpen }: HomeProps): ReactEleme
 }
 
 interface GalleryProps {
-  readonly origin: string;
-  readonly gallery: Gallery;
+  readonly topic: TopicDetail;
   readonly onBack: () => void;
   readonly onPhoto: (index: number) => void;
 }
 
 const THUMB = (SCREEN_W - GUTTER * 3) / 2;
 
-export function GalleryScreen({ origin, gallery, onBack, onPhoto }: GalleryProps): ReactElement {
+export function GalleryScreen({ topic, onBack, onPhoto }: GalleryProps): ReactElement {
   return (
     <FlatList
-      data={gallery.images}
+      data={topic.pictures}
       numColumns={2}
-      keyExtractor={(name): string => name}
+      keyExtractor={(p): string => p.id}
       columnWrapperStyle={{ gap: GUTTER }}
       contentContainerStyle={styles.list}
       ListHeaderComponent={
@@ -72,12 +69,13 @@ export function GalleryScreen({ origin, gallery, onBack, onPhoto }: GalleryProps
           <Pressable onPress={onBack} accessibilityRole="button">
             <Text style={styles.crumbs}>‹ GALLERIES</Text>
           </Pressable>
-          <Text style={styles.pageTitle}>{gallery.title}</Text>
+          <Text style={styles.pageTitle}>{topic.title}</Text>
+          {topic.description ? <Text style={styles.intro}>{topic.description}</Text> : null}
         </View>
       }
       renderItem={({ item, index }): ReactElement => (
-        <Pressable onPress={(): void => onPhoto(index)} accessibilityLabel={`Open photo ${index + 1}`}>
-          <Image source={{ uri: imageUrl(origin, item) }} style={styles.thumb} />
+        <Pressable onPress={(): void => onPhoto(index)} accessibilityLabel={item.caption ?? `Open photo ${index + 1}`}>
+          <Image source={{ uri: item.images.thumb }} style={styles.thumb} />
         </Pressable>
       )}
     />
@@ -85,19 +83,18 @@ export function GalleryScreen({ origin, gallery, onBack, onPhoto }: GalleryProps
 }
 
 interface ViewerProps {
-  readonly origin: string;
-  readonly gallery: Gallery;
+  readonly topic: TopicDetail;
   readonly index: number;
   readonly onClose: () => void;
 }
 
-/** Full-screen, horizontally paged photo viewer — swipe between photos. */
-export function PhotoViewer({ origin, gallery, index, onClose }: ViewerProps): ReactElement {
+/** Full-screen, horizontally paged viewer with caption, date, place and story. */
+export function PhotoViewer({ topic, index, onClose }: ViewerProps): ReactElement {
   return (
     <Modal visible animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.viewer}>
         <FlatList
-          data={gallery.images}
+          data={topic.pictures}
           horizontal
           pagingEnabled
           initialScrollIndex={index}
@@ -106,16 +103,24 @@ export function PhotoViewer({ origin, gallery, index, onClose }: ViewerProps): R
             offset: SCREEN_W * i,
             index: i,
           })}
-          keyExtractor={(name): string => name}
+          keyExtractor={(p): string => p.id}
           showsHorizontalScrollIndicator={false}
-          renderItem={({ item, index: i }): ReactElement => (
-            <View style={styles.page}>
-              <Image source={{ uri: imageUrl(origin, item) }} style={styles.full} resizeMode="contain" />
-              <Text style={styles.caption}>
-                {gallery.title.toUpperCase()} · {i + 1} / {gallery.images.length}
-              </Text>
-            </View>
-          )}
+          renderItem={({ item, index: i }): ReactElement => {
+            const meta = pictureMeta(item);
+            return (
+              <View style={styles.page}>
+                <Image source={{ uri: item.images.display }} style={styles.full} resizeMode="contain" />
+                <ScrollView style={styles.captionBox} contentContainerStyle={styles.captionContent}>
+                  {item.caption ? <Text style={styles.caption}>{item.caption}</Text> : null}
+                  {meta ? <Text style={styles.meta}>{meta}</Text> : null}
+                  {item.story ? <Text style={styles.story}>{item.story}</Text> : null}
+                  <Text style={styles.count}>
+                    {topic.title.toUpperCase()} · {i + 1} / {topic.pictures.length}
+                  </Text>
+                </ScrollView>
+              </View>
+            );
+          }}
         />
         <Pressable style={styles.close} onPress={onClose} accessibilityLabel="Close">
           <Text style={styles.closeText}>✕</Text>
@@ -142,12 +147,18 @@ const styles = StyleSheet.create({
   tileImage: { width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.rule },
   tileTitle: { fontFamily: serif, fontSize: 18, letterSpacing: 1.5, textAlign: 'center', marginTop: 10, color: colors.ink },
   crumbs: { fontSize: 12, letterSpacing: 2, color: colors.muted, textAlign: 'center', paddingTop: 24 },
-  pageTitle: { fontFamily: serif, fontSize: 26, textAlign: 'center', marginVertical: 20, color: colors.ink },
+  pageTitle: { fontFamily: serif, fontSize: 26, textAlign: 'center', marginTop: 20, marginBottom: 12, color: colors.ink },
+  intro: { fontFamily: serif, color: colors.muted, textAlign: 'center', lineHeight: 22, marginBottom: 20 },
   thumb: { width: THUMB, height: THUMB * 0.75, marginBottom: GUTTER, backgroundColor: colors.rule },
   viewer: { flex: 1, backgroundColor: colors.night },
   page: { width: SCREEN_W, flex: 1, justifyContent: 'center', alignItems: 'center' },
-  full: { width: SCREEN_W, height: '75%' },
-  caption: { color: '#aaa', fontSize: 11, letterSpacing: 2, marginTop: 12 },
+  full: { width: SCREEN_W, height: '62%' },
+  captionBox: { maxHeight: '26%', width: SCREEN_W },
+  captionContent: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 12, gap: 6 },
+  caption: { fontFamily: serif, fontSize: 17, color: '#f1efe9', textAlign: 'center' },
+  meta: { fontSize: 13, color: '#b8b5ae' },
+  story: { fontFamily: serif, fontSize: 14, lineHeight: 21, color: '#cfccc5', textAlign: 'center' },
+  count: { color: '#888', fontSize: 11, letterSpacing: 2, marginTop: 4 },
   close: { position: 'absolute', top: 48, right: 20, padding: 8 },
   closeText: { color: '#ddd', fontSize: 22 },
 });

@@ -40,6 +40,19 @@ variable "gateway_service_db_password" {
   default     = "12345678"
 }
 
+variable "content_service_db_password" {
+  description = "Password for content-service_user on the content-service database"
+  type        = string
+  sensitive   = true
+  default     = "12345678"
+}
+
+variable "enable_content_service_iam" {
+  description = "Let Kong invoke the private content-service. Enable only AFTER content-service is first deployed (the binding targets an existing Cloud Run service)."
+  type        = bool
+  default     = false
+}
+
 variable "cloudsql_public_ip" {
   description = "Cloud SQL instance public IP (used by the postgresql provider for schema migrations). Set after the instance is provisioned in the project."
   type        = string

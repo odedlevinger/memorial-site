@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import type { Gallery } from '../galleries';
+import type { Role, Topic } from '../content';
 import { hrefFor } from '../route';
 
 interface HeaderProps {
-  readonly galleries: readonly Gallery[];
+  readonly topics: readonly Topic[];
+  readonly role: Role;
 }
 
-export function Header({ galleries }: HeaderProps): ReactElement {
+export function Header({ topics, role }: HeaderProps): ReactElement {
   const [menuOpen, setMenuOpen] = useState(false);
   const close = (): void => setMenuOpen(false);
 
@@ -29,16 +30,17 @@ export function Header({ galleries }: HeaderProps): ReactElement {
         <div className="nav-group">
           <a href={hrefFor({ page: 'home' })} onClick={close}>Galleries</a>
           <ul className="nav-sub">
-            {galleries.map((g) => (
-              <li key={g.slug}>
-                <a href={hrefFor({ page: 'gallery', slug: g.slug })} onClick={close}>{g.title}</a>
+            {topics.map((t) => (
+              <li key={t.id}>
+                <a href={hrefFor({ page: 'gallery', slug: t.slug })} onClick={close}>{t.title}</a>
               </li>
             ))}
           </ul>
         </div>
         <a href={hrefFor({ page: 'about' })} onClick={close}>About</a>
         <a href={hrefFor({ page: 'contact' })} onClick={close}>Contact</a>
-        <a href={hrefFor({ page: 'account' })} onClick={close}>Sign in</a>
+        {role !== 'viewer' && <a href={hrefFor({ page: 'admin' })} onClick={close}>Admin</a>}
+        <a href={hrefFor({ page: 'account' })} onClick={close}>{role === 'viewer' ? 'Sign in' : 'Account'}</a>
       </nav>
     </header>
   );

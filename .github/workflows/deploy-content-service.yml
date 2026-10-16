@@ -1,0 +1,79 @@
+name: Deploy content-service
+
+# Deploys content-service (topics, pictures, captions, editors) to Cloud Run on every
+# push to main that touches it. Keyless auth via Workload Identity Federation.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/content-service/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-content-service.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write          # required for Workload Identity Federation
+
+concurrency:
+  group: deploy-content-service
+  cancel-in-progress: true
+
+env:
+  GCP_PROJECT_ID: lavi-memorial
+  GCP_REGION: me-west1
+  AR_REPO: memorial-site
+  IMAGE_NAME: content-service
+  CLOUD_RUN_SERVICE: memorial-site-content     # name expected by infra/terraform/iam.tf invoker binding
+  RUNTIME_SA: content-service@lavi-memorial.iam.gserviceaccount.com
+  PHOTOS_BUCKET: lavi-memorial-photos          # infra/terraform/storage.tf
+  OWNER_EMAILS: oded.levinger@gmail.com        # SPEC §1 — owners are configuration, not data
+  WIF_PROVIDER: projects/630004946962/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  DEPLOY_SA: terraform-runner@lavi-memorial.iam.gserviceaccount.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
+
+      - name: Build & push image (tagged with git SHA)
+        run: |
+          IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA}"
+          docker build -f apps/content-service/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      # Requires Secret Manager secrets (runtime SA has secretAccessor):
+      #   content-service-database-url, auth-service-admin-secret
+      # SEED_SOURCE_URL = deployed web app; the placeholder galleries are imported once
+      # into an empty database (SPEC §5).
+      - name: Deploy to Cloud Run
+        run: |
+          AUTH_URL=$(gcloud run services describe memorial-site-auth \
+            --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --format='value(status.url)')
+          WEB_URL=$(gcloud run services describe memorial-site-web \
+            --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --format='value(status.url)' || true)
+          gcloud run deploy "$CLOUD_RUN_SERVICE" \
+            --image "$IMAGE" \
+            --project "$GCP_PROJECT_ID" \
+            --region "$GCP_REGION" \
+            --platform managed \
+            --port 3002 \
+            --memory 1Gi \
+            --no-allow-unauthenticated \
+            --service-account "$RUNTIME_SA" \
+            --add-cloudsql-instances "${GCP_PROJECT_ID}:${GCP_REGION}:my-db" \
+            --set-env-vars "NODE_ENV=production,OWNER_EMAILS=${OWNER_EMAILS},AUTH_SERVICE_URL=${AUTH_URL},AUTH_SERVICE_IAM=true,STORAGE_BUCKET=${PHOTOS_BUCKET},SEED_SOURCE_URL=${WEB_URL}" \
+            --update-secrets "DATABASE_URL=content-service-database-url:latest,ADMIN_SECRET=auth-service-admin-secret:latest"

@@ -14,6 +14,16 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
   }
 
+  # Memory content API (public reads + back office) through Kong → content-service.
+  location /api/content {
+    proxy_pass ${AUTH_SERVICE_URL}/content-service/content;  # AUTH_SERVICE_URL is the Kong URL (only var substituted)
+    proxy_set_header Host $proxy_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 300s;
+  }
+
   # Hashed build assets must 404 (not fall back to index.html) when missing.
   location /assets/ {
     add_header Cache-Control "public, max-age=31536000, immutable";

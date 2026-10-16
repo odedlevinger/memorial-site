@@ -55,11 +55,18 @@ jobs:
       #   • Secret Manager secrets: gateway-service-db-password, gateway-admin-secret
       #     (runtime SA kong-gateway needs secretAccessor)
       #   • enable_service_iam=true applied so Kong's SA can invoke the private auth service
+      #   • enable_content_service_iam=true applied so Kong's SA can invoke content-service
       - name: Deploy to Cloud Run
         run: |
           AUTH_URL=$(gcloud run services describe memorial-site-auth \
             --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --format='value(status.url)')
           AUTH_HOST="${AUTH_URL#https://}"
+          # content-service may not exist on a first rollout — Kong still deploys and the
+          # route 404s at the upstream until content-service is up (re-run this workflow).
+          CONTENT_URL=$(gcloud run services describe memorial-site-content \
+            --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --format='value(status.url)' 2>/dev/null || true)
+          CONTENT_URL="${CONTENT_URL:-https://content-service.invalid}"
+          CONTENT_HOST="${CONTENT_URL#https://}"
           gcloud run deploy "$CLOUD_RUN_SERVICE" \
             --image "$IMAGE" \
             --project "$GCP_PROJECT_ID" \
@@ -69,5 +76,5 @@ jobs:
             --allow-unauthenticated \
             --service-account "kong-gateway@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
             --add-cloudsql-instances "${GCP_PROJECT_ID}:${GCP_REGION}:my-db" \
-            --set-env-vars "GCP_IAM_ENABLED=true,UPSTREAM_PROTOCOL=https,COOKIE_SECURE=true,UPSTREAM_AUTH_TARGET=${AUTH_HOST}:443,UPSTREAM_AUTH_SERVICE_AUDIENCE=${AUTH_URL},GATEWAY_DB_HOST=/cloudsql/${GCP_PROJECT_ID}:${GCP_REGION}:my-db,GATEWAY_DB_NAME=gateway-service,GATEWAY_DB_USER=gateway-service_user" \
+            --set-env-vars "GCP_IAM_ENABLED=true,UPSTREAM_PROTOCOL=https,COOKIE_SECURE=true,UPSTREAM_AUTH_TARGET=${AUTH_HOST}:443,UPSTREAM_AUTH_SERVICE_AUDIENCE=${AUTH_URL},UPSTREAM_CONTENT_TARGET=${CONTENT_HOST}:443,UPSTREAM_CONTENT_SERVICE_AUDIENCE=${CONTENT_URL},GATEWAY_DB_HOST=/cloudsql/${GCP_PROJECT_ID}:${GCP_REGION}:my-db,GATEWAY_DB_NAME=gateway-service,GATEWAY_DB_USER=gateway-service_user" \
             --update-secrets "GATEWAY_DB_PASSWORD=gateway-service-db-password:latest,GATEWAY_ADMIN_SECRET=gateway-admin-secret:latest"

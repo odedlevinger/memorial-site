@@ -1,55 +1,63 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { loadGalleries, type Gallery } from './galleries';
+import { contentApi, type Role, type Topic } from './content';
 import { useRoute, type Route } from './route';
 import { Header } from './components/Header';
 import { Home } from './components/Home';
 import { GalleryPage } from './components/GalleryPage';
 import { About, Contact, NotFound } from './components/TextPages';
 import { Account } from './components/Account';
+import { AdminApp } from './admin/AdminApp';
 
-/** Memory — a photographic memorial: gallery tiles, gallery pages, a lightbox, and sign-in. */
+/** Memory — a photographic memorial: public galleries plus a back office for editors. */
 export default function App(): ReactElement {
   const route = useRoute();
-  const [galleries, setGalleries] = useState<readonly Gallery[] | null>(null);
+  const [topics, setTopics] = useState<readonly Topic[] | null>(null);
+  const [role, setRole] = useState<Role>('viewer');
+  const [version, setVersion] = useState(0);
+  const refresh = useCallback((): void => setVersion((v) => v + 1), []);
 
   useEffect(() => {
     let active = true;
-    void loadGalleries().then((list) => {
-      if (active) setGalleries(list);
-    });
+    contentApi.publicTopics().then(
+      (list) => active && setTopics(list),
+      () => active && setTopics([]),
+    );
+    void contentApi.me().then((r) => active && setRole(r));
     return (): void => {
       active = false;
     };
-  }, []);
+  }, [version]);
 
   return (
     <div className="site">
-      <Header galleries={galleries ?? []} />
+      <Header topics={topics ?? []} role={role} />
       <main className="site-main">
-        {galleries === null ? <p className="empty">Loading…</p> : renderPage(route, galleries)}
+        {topics === null ? <p className="empty">Loading…</p> : renderPage(route, topics, role, refresh)}
       </main>
       <footer className="site-footer">
-        <p>© {new Date().getFullYear()} Memory · Photographs are placeholders until the archive is added.</p>
+        <p>© {new Date().getFullYear()} Memory</p>
       </footer>
     </div>
   );
 }
 
-function renderPage(route: Route, galleries: readonly Gallery[]): ReactElement {
+function renderPage(route: Route, topics: readonly Topic[], role: Role, refresh: () => void): ReactElement {
   switch (route.page) {
     case 'home':
-      return <Home galleries={galleries} />;
-    case 'gallery': {
-      const gallery = galleries.find((g) => g.slug === route.slug);
-      return gallery ? <GalleryPage gallery={gallery} /> : <NotFound />;
-    }
+      return <Home topics={topics} />;
+    case 'gallery':
+      return <GalleryPage key={route.slug} slug={route.slug} />;
     case 'about':
       return <About />;
     case 'contact':
       return <Contact />;
     case 'account':
-      return <Account />;
+      return <Account onSessionChange={refresh} />;
+    case 'admin':
+    case 'admin-topic':
+    case 'admin-editors':
+      return <AdminApp route={route} role={role} onContentChanged={refresh} />;
     default:
       return <NotFound />;
   }

@@ -28,15 +28,17 @@ browser / mobile ──► web nginx ──► Kong ──► content-service (C
 | `editors` | email (pk, lower-case), added_by, created_at |
 | `audit_log` | id, actor_user_id, actor_email, action, entity, entity_id, details jsonb, at |
 
-Migrations explicit in prod (`synchronize` only in dev), per constitution.
+Schema is applied with TypeORM `synchronize` on startup — the same as auth-service today.
+**Follow-up:** switch both services to explicit migrations, as the constitution asks.
 
 ## Images
 
 - Bucket `lavi-memorial-photos` (Terraform), uniform access, **public read** on objects —
   keys are random UUIDs; draft images are unlisted but reachable if the URL is known
   (acceptable for v1; noted in SPEC open questions if you want stricter).
-- On upload (multipart, ≤ 20 MB): validate type with `sharp`, strip EXIF location,
-  store `original/`, `display/` (2000 px), `thumb/` (600 px) as WebP + JPEG fallback.
+- On upload (multipart, ≤ 20 MB): validate type with `sharp`, re-encode (drops EXIF/GPS),
+  store `original.jpg` (≤ 4000 px), `display.jpg` (2000 px), `thumb.jpg` (600 px) — JPEG only.
+- The web back office uploads one file per request (Cloud Run's 32 MB request cap).
 - New dependency: **`sharp`** (image resize) and **`@google-cloud/storage`** — no existing
   stack component covers either (YAGNI check passed).
 

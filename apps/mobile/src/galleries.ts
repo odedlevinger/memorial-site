@@ -1,11 +1,31 @@
-// Gallery catalogue for the mobile app. The manifest and images are served by the web
-// app (apps/web/public/gallery), so mobile and web always show the same photographs.
+// Content for the mobile app — the same public API the website uses
+// (<web origin>/api/content/public/*), so both always show the same topics and pictures.
 // Set EXPO_PUBLIC_WEB_URL to the deployed web origin, e.g. https://memorial-site-web-….run.app
 
-export interface Gallery {
+export interface PictureImages {
+  readonly display: string;
+  readonly thumb: string;
+}
+
+export interface Picture {
+  readonly id: string;
+  readonly caption: string | null;
+  readonly dateText: string | null;
+  readonly place: string | null;
+  readonly story: string | null;
+  readonly images: PictureImages;
+}
+
+export interface Topic {
+  readonly id: string;
   readonly slug: string;
   readonly title: string;
-  readonly images: readonly string[];
+  readonly description: string | null;
+  readonly cover: PictureImages | null;
+}
+
+export interface TopicDetail extends Topic {
+  readonly pictures: readonly Picture[];
 }
 
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -14,30 +34,27 @@ export function webOrigin(): string {
   return (process.env['EXPO_PUBLIC_WEB_URL'] ?? '').replace(/\/+$/, '');
 }
 
-export function imageUrl(origin: string, name: string): string {
-  return `${origin}/gallery/${name}`;
-}
-
-function isGallery(value: unknown): value is Gallery {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v['slug'] === 'string' &&
-    typeof v['title'] === 'string' &&
-    Array.isArray(v['images']) &&
-    v['images'].every((i) => typeof i === 'string')
-  );
-}
-
-/** Loads the manifest from the web host; returns [] when unreachable or malformed. */
-export async function loadGalleries(origin: string): Promise<readonly Gallery[]> {
-  if (!origin) return [];
+async function get<T>(origin: string, path: string, fallback: T): Promise<T> {
+  if (!origin) return fallback;
   try {
-    const res = await fetch(`${origin}/gallery/galleries.json`);
-    if (!res.ok) return [];
-    const data: unknown = await res.json();
-    return Array.isArray(data) ? data.filter(isGallery) : [];
+    const res = await fetch(`${origin}/api/content/public${path}`);
+    return res.ok ? ((await res.json()) as T) : fallback;
   } catch {
-    return [];
+    return fallback;
   }
+}
+
+/** Published topics; [] when the site is unreachable. */
+export function loadTopics(origin: string): Promise<readonly Topic[]> {
+  return get<readonly Topic[]>(origin, '/topics', []);
+}
+
+/** One published topic with its pictures; null when missing or unreachable. */
+export function loadTopic(origin: string, slug: string): Promise<TopicDetail | null> {
+  return get<TopicDetail | null>(origin, `/topics/${encodeURIComponent(slug)}`, null);
+}
+
+/** "Summer 1974 · Haifa" style line for a picture (empty when neither is set). */
+export function pictureMeta(p: Picture): string {
+  return [p.dateText, p.place].filter(Boolean).join(' · ');
 }

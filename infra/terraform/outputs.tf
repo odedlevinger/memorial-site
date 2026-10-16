@@ -21,6 +21,17 @@ output "gateway_service_database_url" {
   sensitive   = true
 }
 
+output "content_service_database_url" {
+  description = "DATABASE_URL for content-service (store in Secret Manager)"
+  value       = "postgres://content-service_user:${var.content_service_db_password}@/${google_sql_database.content_service.name}?host=/cloudsql/${google_sql_database_instance.my_db.connection_name}"
+  sensitive   = true
+}
+
+output "photos_bucket" {
+  description = "Cloud Storage bucket for Memory photographs (content-service STORAGE_BUCKET)"
+  value       = google_storage_bucket.photos.name
+}
+
 output "kong_gateway_external_ip" {
   description = "Static public IP for the Kong Gateway LB (null unless enable_public_lb = true)"
   value       = one(google_compute_global_address.kong_gateway_ip[*].address)
