@@ -22,9 +22,11 @@ resource "google_storage_bucket" "photos" {
   }
 }
 
+# Read one object by its exact URL — but NOT list the bucket (objectViewer would allow
+# listing, which would reveal the keys of draft pictures).
 resource "google_storage_bucket_iam_member" "photos_public_read" {
   bucket = google_storage_bucket.photos.name
-  role   = "roles/storage.objectViewer"
+  role   = "roles/storage.legacyObjectReader"
   member = "allUsers"
 }
 
