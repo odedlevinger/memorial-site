@@ -54,8 +54,8 @@ jobs:
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
       # Requires Secret Manager secrets (grant the runtime SA secretAccessor):
-      #   auth-service-database-url, auth-service-jwt-access-secret
-      # GOOGLE_CLIENT_ID is the public web client id, set as repo variable VITE_GOOGLE_CLIENT_ID.
+      #   auth-service-database-url, auth-service-jwt-access-secret, auth-service-admin-secret,
+      #   google-client-id, google-client-secret
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "$CLOUD_RUN_SERVICE" \
@@ -66,5 +66,5 @@ jobs:
             --port 3001 \
             --no-allow-unauthenticated \
             --add-cloudsql-instances "${GCP_PROJECT_ID}:${GCP_REGION}:my-db" \
-            --set-env-vars "NODE_ENV=production,GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}" \
-            --update-secrets "DATABASE_URL=auth-service-database-url:latest,JWT_ACCESS_SECRET=auth-service-jwt-access-secret:latest"
+            --set-env-vars "NODE_ENV=production" \
+            --update-secrets "DATABASE_URL=auth-service-database-url:latest,JWT_ACCESS_SECRET=auth-service-jwt-access-secret:latest,ADMIN_SECRET=auth-service-admin-secret:latest,GOOGLE_CLIENT_ID=google-client-id:latest,GOOGLE_CLIENT_SECRET=google-client-secret:latest"

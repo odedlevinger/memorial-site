@@ -13,6 +13,15 @@ resource "google_service_account" "kong_gateway" {
   description  = "Used by kong-gateway Cloud Run service to invoke internal backends via IAM OIDC"
 }
 
+# Kong runs as this SA (deploy-kong-gateway.yml --service-account), so it needs its own
+# Cloud SQL client role for the /cloudsql socket (session store) and log writing.
+resource "google_project_iam_member" "kong_gateway_roles" {
+  for_each = toset(["roles/cloudsql.client", "roles/logging.logWriter"])
+  project  = var.project_id
+  role     = each.value
+  member   = "serviceAccount:${google_service_account.kong_gateway.email}"
+}
+
 # ── roles/run.invoker bindings ─────────────────────────────────────────────────
 # Grant Kong's SA permission to invoke each backend service.
 # With --no-allow-unauthenticated on the backends, only callers with this
