@@ -1,0 +1,13 @@
+# Local tfvars contain secrets — never commit
+terraform.tfvars
+*.tfvars
+!*.tfvars.example
+
+# Terraform state and working directories
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+*.tfplan
+tfplan*
+crash.log

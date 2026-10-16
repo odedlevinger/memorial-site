@@ -1,0 +1,34 @@
+# Terraform ignore file — prevents sensitive and generated files from being
+# included in terraform module packages or remote operations.
+
+# Terraform state (never package state files)
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+
+# Terraform lock and cache
+.terraform/
+.terraform.lock.hcl
+
+# Variable overrides (contain secrets — never commit, never package)
+*.tfvars
+!*.tfvars.example
+
+# Plan output files
+tfplan
+*.tfplan
+
+# OS and editor artefacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# CI and shell scripts (not needed in module packages)
+*.sh
+
+# Documentation
+*.md
+README*

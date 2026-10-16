@@ -1,0 +1,54 @@
+# Ignore build outputs from performing a nix-build or `nix build` command
+result
+result-*
+
+# Ignore automatically generated direnv output
+.direnv
+
+# Ignore NixOS interactive test driver history
+**/.nixos-test-history
+
+# ── Node / TypeScript ─────────────────────────────────────────────────────────
+node_modules/
+dist/
+build/
+coverage/
+.nx/
+*.tsbuildinfo
+*.log
+npm-debug.log*
+
+# ── Environment / secrets (keep *.example) ───────────────────────────────────
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ── Python (kong-gateway) ────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+.venv/
+venv/
+.coverage
+.pytest_cache/
+*.egg-info/
+
+# ── Terraform ────────────────────────────────────────────────────────────────
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.tfplan
+tfplan*
+
+# ── Expo / mobile ────────────────────────────────────────────────────────────
+.expo/
+
+# ── OS / IDE ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/

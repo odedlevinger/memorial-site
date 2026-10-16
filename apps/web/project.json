@@ -1,0 +1,101 @@
+{
+  "name": "web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/web/src",
+  "tags": ["type:app", "platform:web"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.json --noEmit && vite build",
+        "cwd": "{projectRoot}"
+      },
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vite",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "preview": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vite preview",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test:watch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "tsc -p tsconfig.json --noEmit",
+          "shellcheck -x scripts/*.sh"
+        ],
+        "cwd": "{projectRoot}",
+        "parallel": false
+      }
+    },
+    "test:scripts": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bats tests/scripts/",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "deploy-ios-testflight": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "scripts/deploy-ios-testflight.sh",
+        "cwd": "{projectRoot}",
+        "color": true
+      },
+      "configurations": {
+        "dry-run": {
+          "command": "scripts/deploy-ios-testflight.sh --dry-run"
+        },
+        "skip-upload": {
+          "command": "scripts/deploy-ios-testflight.sh --skip-upload"
+        }
+      }
+    },
+    "docker-build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose build web",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "docker-up": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose up -d web",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "docker-down": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose stop web && docker compose rm -f web",
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}

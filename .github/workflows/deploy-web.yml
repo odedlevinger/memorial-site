@@ -1,0 +1,72 @@
+name: Deploy web
+
+# Deploys the web shell (static SPA served by nginx) to Cloud Run on every push
+# to main that touches it. Keyless auth via Workload Identity Federation.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+env:
+  GCP_PROJECT_ID: memorial-site
+  GCP_REGION: me-west1
+  AR_REPO: memorial-site
+  IMAGE_NAME: web
+  CLOUD_RUN_SERVICE: memorial-site-web         # name fronted by infra/terraform/web-load-balancer.tf
+  WIF_PROVIDER: projects/YOUR_GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  DEPLOY_SA: terraform-runner@memorial-site.iam.gserviceaccount.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
+
+      - name: Build & push image (tagged with git SHA)
+        # VITE_GOOGLE_CLIENT_ID is a public client id baked into the bundle at build
+        # time. Set it as a repo variable: Settings → Secrets and variables → Actions → Variables.
+        run: |
+          IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA}"
+          docker build \
+            --build-arg VITE_GOOGLE_CLIENT_ID="${{ vars.VITE_GOOGLE_CLIENT_ID }}" \
+            -f apps/web/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      # nginx proxies /api/auth → Kong, so wire AUTH_SERVICE_URL/KONG_GATEWAY_URL to the
+      # deployed Kong URL (looked up here; Kong must be deployed first).
+      - name: Deploy to Cloud Run
+        run: |
+          KONG_URL=$(gcloud run services describe kong-gateway \
+            --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --format='value(status.url)')
+          gcloud run deploy "$CLOUD_RUN_SERVICE" \
+            --image "$IMAGE" \
+            --project "$GCP_PROJECT_ID" \
+            --region "$GCP_REGION" \
+            --platform managed \
+            --port 80 \
+            --allow-unauthenticated \
+            --set-env-vars "AUTH_SERVICE_URL=${KONG_URL},KONG_GATEWAY_URL=${KONG_URL}"

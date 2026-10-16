@@ -1,0 +1,59 @@
+_format_version: "3.0"
+_transform: true
+
+# ── Upstreams — named targets for dynamic_router to select ───────────────────
+# Targets are injected at container startup via envsubst (docker-init.sh).
+# Local dev:  UPSTREAM_*_TARGET = docker-compose service name + port  (http)
+# Cloud Run:  UPSTREAM_*_TARGET = Cloud Run hostname + 443             (https)
+upstreams:
+  - name: auth-service
+    targets:
+      - target: ${UPSTREAM_AUTH_TARGET}
+
+# ── Services ──────────────────────────────────────────────────────────────────
+services:
+  # Dynamic catch-all placeholder — upstream name resolved at runtime by dynamic-router plugin.
+  # The host must match one of the upstream names above.
+  - name: dynamic-target
+    protocol: ${UPSTREAM_PROTOCOL}
+    host: auth-service        # default upstream; overridden per-request by dynamic-router
+    port: 80
+    connect_timeout: 5000
+    read_timeout: 300000
+    write_timeout: 300000
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+routes:
+  # ── Catch-all — dynamic-router resolves upstream from path prefix ────────
+  # session_identity is route-level here so it can be tuned independently as the
+  # new business domain adds upstreams.
+  - name: catch-all
+    service: dynamic-target
+    paths:
+      - "/"
+    strip_path: false
+    plugins:
+      - name: dynamic_router
+      - name: session_identity
+        config:
+          cookie_name: app_session
+
+# ── Global plugins (apply to all routes) ─────────────────────────────────────
+plugins:
+  - name: rate-limiting
+    config:
+      minute: 600
+      policy: local
+      fault_tolerant: true
+      hide_client_headers: false
+
+  - name: correlation-id
+    config:
+      header_name: X-Request-ID
+      generator: uuid
+      echo_downstream: true
+
+  - name: file-log
+    config:
+      path: /var/log/kong/access.log
+      reopen: false

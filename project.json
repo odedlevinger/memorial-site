@@ -1,0 +1,28 @@
+{
+  "name": "workspace",
+  "$schema": "./node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "targets": {
+    "local-deploy": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose up --build -d",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "local-down": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose down",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "local-logs": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose logs -f",
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}

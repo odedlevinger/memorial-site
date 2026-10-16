@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Memory",
+    "slug": "memorial-site",
+    "version": "1.0.0",
+    "platforms": ["ios", "android"],
+    "sdkVersion": "52.0.0",
+    "orientation": "portrait",
+    "ios": {
+      "bundleIdentifier": "com.projecttemplate.app"
+    },
+    "android": {
+      "package": "com.projecttemplate.app"
+    }
+  }
+}

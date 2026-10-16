@@ -1,0 +1,18 @@
+# Copy to terraform.tfvars (git-ignored) and fill in real values before applying.
+
+project_id       = "memorial-site"
+region           = "me-west1"
+db_instance_name = "my-db"
+db_tier          = "db-f1-micro"   # db-g1-small or larger for production
+
+# Passwords — use strong random values in production and store them in GCP Secret Manager.
+# Generate with: openssl rand -base64 32
+# Baseline services only: auth-service + gateway-service (Kong session store).
+auth_service_db_password    = "12345678"
+gateway_service_db_password = "12345678"
+
+# Network perimeter — required for the Global HTTPS LB managed SSL certificates
+# (only used when enable_public_lb = true). DNS A record must point the API domain
+# at the kong_gateway_external_ip output value.
+domain_name = "api.example.com"   # Kong Gateway API host
+web_domain  = "example.com"       # web frontend apex (cert also covers www.<web_domain>)

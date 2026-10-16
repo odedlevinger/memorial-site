@@ -1,0 +1,11 @@
+# Capacitor — native build artifacts (not source)
+ios/App/Pods/
+ios/DerivedData/
+android/.gradle/
+android/app/build/
+android/build/
+android/capacitor-cordova-android-plugins/build/
+
+# Signing keys — never commit
+android/app/*.jks
+android/app/*.keystore
