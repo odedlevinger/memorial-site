@@ -67,6 +67,7 @@ jobs:
             --project "$GCP_PROJECT_ID" \
             --region "$GCP_REGION" \
             --platform managed \
+            --cpu-boost \
             --port 80 \
             --allow-unauthenticated \
             --set-env-vars "AUTH_SERVICE_URL=${KONG_URL},KONG_GATEWAY_URL=${KONG_URL}"

@@ -63,6 +63,7 @@ jobs:
             --project "$GCP_PROJECT_ID" \
             --region "$GCP_REGION" \
             --platform managed \
+            --cpu-boost \
             --port 3001 \
             --no-allow-unauthenticated \
             --add-cloudsql-instances "${GCP_PROJECT_ID}:${GCP_REGION}:my-db" \
