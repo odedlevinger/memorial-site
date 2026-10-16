@@ -21,14 +21,14 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GCP_PROJECT_ID: memorial-site-oded
+  GCP_PROJECT_ID: lavi-memorial
   GCP_REGION: me-west1
   AR_REPO: memorial-site                       # Artifact Registry repo (infra/terraform/artifact-registry.tf)
   IMAGE_NAME: auth-service
   CLOUD_RUN_SERVICE: memorial-site-auth        # name expected by infra/terraform/iam.tf invoker binding
   # Keyless auth identifiers (not secrets) — created by infra/setup_identity.sh.
-  WIF_PROVIDER: projects/698365944661/locations/global/workloadIdentityPools/github-pool/providers/github-provider
-  DEPLOY_SA: terraform-runner@memorial-site-oded.iam.gserviceaccount.com
+  WIF_PROVIDER: projects/630004946962/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  DEPLOY_SA: terraform-runner@lavi-memorial.iam.gserviceaccount.com
 
 jobs:
   deploy:

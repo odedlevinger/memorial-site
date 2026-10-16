@@ -1,7 +1,7 @@
 # Deploy workflows
 
 One workflow per service — each deploys to **Cloud Run** (region `me-west1`, project
-`memorial-site-oded`) on every push to `main` that touches that service's paths:
+`lavi-memorial`) on every push to `main` that touches that service's paths:
 
 | Workflow | Builds | Cloud Run service |
 |---|---|---|
@@ -9,7 +9,7 @@ One workflow per service — each deploys to **Cloud Run** (region `me-west1`, p
 | `deploy-kong-gateway.yml` | `apps/kong-gateway/Dockerfile` | `kong-gateway` (public entry point) |
 | `deploy-web.yml` | `apps/web/Dockerfile` | `memorial-site-web` (public SPA) |
 
-Images are pushed to Artifact Registry `me-west1-docker.pkg.dev/memorial-site-oded/memorial-site/<service>:<git-sha>`.
+Images are pushed to Artifact Registry `me-west1-docker.pkg.dev/lavi-memorial/memorial-site/<service>:<git-sha>`.
 Auth to GCP is **keyless** via Workload Identity Federation (no JSON keys).
 
 ## Prerequisites (one-time, GCP side — not done by these workflows)
