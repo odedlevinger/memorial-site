@@ -4,7 +4,7 @@
 #
 # Build context for all services is the repo root so npm ci can reach the root package-lock.json.
 #
-# Retained baseline: my-db + kong-gateway + auth-service + web shell. The new business domain
+# Services: my-db + kong-gateway + auth-service + content-service + web. The new business domain
 # adds its services here and registers them with Kong (4 touchpoints) per CLAUDE.md.
 
 services:
@@ -53,6 +53,29 @@ services:
     ports:
       - '3001:3001'
 
+  content-service:
+    build:
+      context: .                                      # repo root — required for package-lock.json
+      dockerfile: apps/content-service/Dockerfile
+    container_name: content-service
+    restart: unless-stopped
+    depends_on:
+      my-db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DATABASE_URL: postgres://content-service_user:12345678@my-db:5432/content-service
+      OWNER_EMAILS: ${OWNER_EMAILS:-oded.levinger@gmail.com}
+      AUTH_SERVICE_URL: http://auth-service:3001
+      ADMIN_SECRET: ${ADMIN_SECRET:-change-me-in-dev}
+      AUTH_SERVICE_IAM: "false"
+      STORAGE_LOCAL_DIR: /tmp/content-files
+      STORAGE_PUBLIC_BASE: http://localhost:8000/content-service/content/files
+      SEED_SOURCE_URL: http://web
+    ports:
+      - '3002:3002'
+
   kong-gateway:
     build:
       context: .                                      # repo root
@@ -77,6 +100,7 @@ services:
       GATEWAY_ADMIN_SECRET: ${GATEWAY_ADMIN_SECRET:-change-me-in-dev}
       # Upstream targets — docker-compose service names resolve inside the Docker network
       UPSTREAM_AUTH_TARGET: auth-service:3001
+      UPSTREAM_CONTENT_TARGET: content-service:3002
       UPSTREAM_PROTOCOL: http
       GCP_IAM_ENABLED: "false"
       COOKIE_SECURE: "false"

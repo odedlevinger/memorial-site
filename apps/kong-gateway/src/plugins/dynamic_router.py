@@ -26,6 +26,7 @@ priority = PRIORITY
 # Maps the first path segment to the Kong upstream name.
 UPSTREAM_MAP: dict[str, str] = {
     "auth-service": "auth-service",
+    "content-service": "content-service",
 }
 
 # Paths that route to a specific upstream with an explicit rewritten path.

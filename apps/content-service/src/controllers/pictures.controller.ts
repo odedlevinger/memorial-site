@@ -1,0 +1,108 @@
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+  UploadedFile,
+  UploadedFiles,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { OrderDto, UpdatePictureDto } from '../dto/content.dto.js';
+import { CurrentCaller, RequireRole, RolesGuard } from '../guards/roles.guard.js';
+import type { Caller, PictureView } from '../interfaces/content.interfaces.js';
+import { MAX_UPLOAD_BYTES } from '../services/images.service.js';
+import { PicturesService } from '../services/pictures.service.js';
+
+const MAX_FILES = 50;
+const limits = { fileSize: MAX_UPLOAD_BYTES };
+
+@ApiTags('pictures (back office)')
+@Controller('content')
+@UseGuards(RolesGuard)
+@RequireRole('editor')
+@ApiResponse({ status: 401, description: 'Not signed in' })
+@ApiResponse({ status: 403, description: 'Not an editor' })
+export class PicturesController {
+  constructor(private readonly pictures: PicturesService) {}
+
+  @Post('topics/:id/pictures')
+  @UseInterceptors(FilesInterceptor('files', MAX_FILES, { limits }))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ schema: { type: 'object', properties: { files: { type: 'array', items: { type: 'string', format: 'binary' } } } } })
+  @ApiOperation({ summary: 'Upload pictures (JPEG/PNG/WebP, ≤ 20 MB each) to the end of a topic, as drafts' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 201, description: 'Created pictures' })
+  @ApiResponse({ status: 400, description: 'No files / unsupported or oversized image' })
+  @ApiResponse({ status: 404, description: 'Topic not found' })
+  upload(
+    @Param('id', ParseUUIDPipe) topicId: string,
+    @UploadedFiles() files: Express.Multer.File[] | undefined,
+    @CurrentCaller() caller: Caller,
+  ): Promise<PictureView[]> {
+    return this.pictures.upload(topicId, (files ?? []).map((f) => f.buffer), caller);
+  }
+
+  @Put('topics/:id/pictures/order')
+  @ApiOperation({ summary: 'Reorder a topic’s pictures — body lists every picture id once' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Reordered pictures' })
+  @ApiResponse({ status: 400, description: 'ids do not match the topic’s pictures' })
+  reorder(
+    @Param('id', ParseUUIDPipe) topicId: string,
+    @Body() dto: OrderDto,
+    @CurrentCaller() caller: Caller,
+  ): Promise<PictureView[]> {
+    return this.pictures.reorder(topicId, dto.ids, caller);
+  }
+
+  @Patch('pictures/:id')
+  @ApiOperation({ summary: 'Edit caption, date, place, story, status, or move to another topic' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Updated picture' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 404, description: 'Picture or target topic not found' })
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdatePictureDto,
+    @CurrentCaller() caller: Caller,
+  ): Promise<PictureView> {
+    return this.pictures.update(id, dto, caller);
+  }
+
+  @Put('pictures/:id/image')
+  @UseInterceptors(FileInterceptor('file', { limits }))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
+  @ApiOperation({ summary: 'Replace a picture’s image, keeping its captions' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Updated picture' })
+  @ApiResponse({ status: 400, description: 'No file / unsupported or oversized image' })
+  @ApiResponse({ status: 404, description: 'Picture not found' })
+  replaceImage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @CurrentCaller() caller: Caller,
+  ): Promise<PictureView> {
+    if (!file) throw new BadRequestException('No file uploaded');
+    return this.pictures.replaceImage(id, file.buffer, caller);
+  }
+
+  @Delete('pictures/:id')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Delete a picture' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 204, description: 'Deleted' })
+  @ApiResponse({ status: 404, description: 'Picture not found' })
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentCaller() caller: Caller): Promise<void> {
+    return this.pictures.remove(id, caller);
+  }
+}

@@ -9,6 +9,9 @@ upstreams:
   - name: auth-service
     targets:
       - target: ${UPSTREAM_AUTH_TARGET}
+  - name: content-service
+    targets:
+      - target: ${UPSTREAM_CONTENT_TARGET}
 
 # ── Services ──────────────────────────────────────────────────────────────────
 services:

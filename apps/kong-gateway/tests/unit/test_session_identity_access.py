@@ -202,3 +202,36 @@ class TestAccessPhase:
         with patch("src.plugins.session_identity.run_migrations") as mock_mig:
             _make_plugin(conf).init_worker(mock_kong)
         mock_mig.assert_not_called()
+
+
+class TestPublicContentReads:
+    """content-service public reads: GET/HEAD only, no traversal, forged identity stripped."""
+
+    @pytest.mark.parametrize("method,path", [
+        ("GET", "/content-service/content/public/topics"),
+        ("GET", "/content-service/content/public/topics/streets"),
+        ("HEAD", "/content-service/content/files/pictures/x/thumb.jpg"),
+    ])
+    def test_public_reads_bypass_session_and_strip_identity(self, mock_kong, conf, method, path):
+        mock_kong.request.get_path.return_value = path
+        mock_kong.request.get_method.return_value = method
+        _make_plugin(conf).access(mock_kong)
+
+        mock_kong.response.exit.assert_not_called()
+        cleared = {c.args[0] for c in mock_kong.service.request.clear_header.call_args_list}
+        assert cleared == {"X-User-Context", "X-User-Id"}
+        mock_kong.service.request.set_header.assert_not_called()
+
+    @pytest.mark.parametrize("method,path", [
+        ("POST", "/content-service/content/public/topics"),
+        ("DELETE", "/content-service/content/public/topics/x"),
+        ("GET", "/content-service/content/public/../topics"),
+        ("GET", "/content-service/content/topics"),
+        ("GET", "/content-service/content/publicx/topics"),
+    ])
+    def test_writes_traversal_and_private_paths_require_session(self, mock_kong, conf, method, path):
+        mock_kong.request.get_path.return_value = path
+        mock_kong.request.get_method.return_value = method
+        _make_plugin(conf).access(mock_kong)
+
+        assert mock_kong.response.exit.call_args.args[0] == 401

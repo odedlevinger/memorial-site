@@ -36,3 +36,12 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON app.sessions (expires_at);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id    ON app.sessions (user_id);
 ALTER TABLE app.sessions OWNER TO "gateway-service_user";
 ALTER DEFAULT PRIVILEGES IN SCHEMA app GRANT ALL ON TABLES TO "gateway-service_user";
+
+-- ── content-service ───────────────────────────────────────────────────────────
+-- Topics, pictures, captions and editors for the Memory site (apps/content-service).
+\c "auth-service"
+CREATE DATABASE "content-service";
+CREATE USER "content-service_user" WITH PASSWORD '12345678';
+GRANT ALL PRIVILEGES ON DATABASE "content-service" TO "content-service_user";
+\c "content-service"
+GRANT ALL ON SCHEMA public TO "content-service_user";

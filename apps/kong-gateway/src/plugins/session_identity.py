@@ -42,6 +42,24 @@ _PUBLIC_PATHS = frozenset({
     "/auth-service/auth/refresh",
 })
 
+# Read-only public prefixes (GET/HEAD only): the Memory site's published content and,
+# in local dev, content-service's own image files.
+_PUBLIC_READ_PREFIXES = (
+    "/content-service/content/public/",
+    "/content-service/content/files/",
+)
+_READ_METHODS = frozenset({"GET", "HEAD"})
+
+
+def _is_public(path: str, method: str) -> bool:
+    if path.rstrip("/") in _PUBLIC_PATHS:
+        return True
+    return (
+        method in _READ_METHODS
+        and ".." not in path
+        and any(path.startswith(prefix) for prefix in _PUBLIC_READ_PREFIXES)
+    )
+
 Schema = [
     {"cookie_name": {"type": "string", "default": "app_session"}},
 ]
@@ -118,9 +136,12 @@ class Plugin:
         Always overwrites any client-supplied X-User-Context before injecting.
         Public paths (login, register, health) bypass auth.
         """
-        # Skip auth for public endpoints (checked against the original client path).
+        # Skip auth for public endpoints (checked against the original client path),
+        # but never let a client-forged identity through to the upstream.
         path = kong.request.get_path()
-        if path and path.rstrip("/") in _PUBLIC_PATHS:
+        if path and _is_public(path, kong.request.get_method()):
+            kong.service.request.clear_header(_HEADER_USER_CONTEXT)
+            kong.service.request.clear_header(_HEADER_USER_ID)
             return
 
         cookie_header = kong.request.get_header("Cookie")

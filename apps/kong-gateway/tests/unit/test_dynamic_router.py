@@ -152,3 +152,11 @@ class TestDynamicRouterAccess:
         mock_kong.service.request.set_header.assert_any_call(
             "Authorization", "Bearer login-token"
         )
+
+
+class TestContentServiceRouting:
+    def test_content_service_routes_and_strips_prefix(self, mock_kong, conf):
+        _call_access(mock_kong, conf, "/content-service/content/public/topics")
+        mock_kong.service.set_upstream.assert_called_once_with("content-service")
+        mock_kong.service.request.set_path.assert_called_once_with("/content/public/topics")
+        mock_kong.response.exit.assert_not_called()

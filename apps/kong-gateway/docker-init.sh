@@ -5,14 +5,15 @@
 set -e
 
 : "${UPSTREAM_AUTH_TARGET:=auth-service:3001}"
+: "${UPSTREAM_CONTENT_TARGET:=content-service:3002}"
 : "${UPSTREAM_PROTOCOL:=http}"
 
-export UPSTREAM_AUTH_TARGET UPSTREAM_PROTOCOL
+export UPSTREAM_AUTH_TARGET UPSTREAM_CONTENT_TARGET UPSTREAM_PROTOCOL
 
 KONG_DECLARATIVE_CONFIG=/tmp/kong.yml
 export KONG_DECLARATIVE_CONFIG
 
-envsubst '${UPSTREAM_AUTH_TARGET} ${UPSTREAM_PROTOCOL}' \
+envsubst '${UPSTREAM_AUTH_TARGET} ${UPSTREAM_CONTENT_TARGET} ${UPSTREAM_PROTOCOL}' \
   < /etc/kong/kong.yml.template > "$KONG_DECLARATIVE_CONFIG"
 
 # ── Pre-start Python plugin server ───────────────────────────────────────────
