@@ -11,7 +11,8 @@ COPY package.json package-lock.json ./
 COPY apps/web/package.json ./apps/web/
 
 # Install only the dependencies needed for this workspace.
-RUN npm ci --workspace=apps/web --include-workspace-root
+# --ignore-scripts: nx's post-install hangs on node:20-alpine; the web build needs no install scripts.
+RUN npm ci --workspace=apps/web --include-workspace-root --ignore-scripts
 
 # Copy web source + build config and build static assets.
 COPY apps/web/src/               ./apps/web/src/

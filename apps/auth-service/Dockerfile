@@ -11,7 +11,10 @@ COPY package.json package-lock.json ./
 COPY apps/auth-service/package.json ./apps/auth-service/
 
 # Install only the dependencies needed for this workspace (hoisted to /app/node_modules).
-RUN npm ci --workspace=apps/auth-service --include-workspace-root
+# --ignore-scripts: nx's post-install hangs on node:20-alpine (and nx is not needed in the
+# image); bcrypt is the only runtime dependency with an install step, so rebuild just it.
+RUN npm ci --workspace=apps/auth-service --include-workspace-root --ignore-scripts \
+ && npm rebuild bcrypt
 
 # Copy service source and config files needed for the build.
 COPY apps/auth-service/src/                  ./apps/auth-service/src/
