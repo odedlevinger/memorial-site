@@ -266,10 +266,38 @@ describe('pages', () => {
     expect(screen.getByRole('link', { name: 'Topics' }).getAttribute('aria-current')).toBeNull();
   });
 
+  it('changes the site title and tagline everywhere they appear', async () => {
+    await openAdmin('#/admin/pages');
+    const header = screen.getByRole('banner');
+    expect(await within(header).findByText('a life in photographs')).toBeTruthy();
+    const title = await screen.findByLabelText('Title');
+    fireEvent.change(title, { target: { value: 'Grandpa Lavi' } });
+    fireEvent.change(screen.getByLabelText('Tagline (optional)'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save site title' }));
+    expect(await screen.findByText('Site title saved')).toBeTruthy();
+    expect(await within(header).findByText('Grandpa Lavi')).toBeTruthy();
+    await waitFor(() => expect(document.title).toBe('Grandpa Lavi'));
+    expect(within(header).queryByText('a life in photographs')).toBeNull();
+    expect(screen.getByRole('contentinfo').textContent).toContain('Grandpa Lavi');
+
+    server.failNext(/PUT \/api\/content\/site$/, 400, { message: ['title must not be empty'] });
+    fireEvent.click(screen.getByRole('button', { name: 'Save site title' }));
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'title must not be empty');
+  });
+
   it('shows a load error for a page it cannot fetch', async () => {
     for (let i = 0; i < publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/pages\/about$/, 503, { message: 'Unavailable' });
     await openAdmin('#/admin/pages');
-    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Unavailable');
+    const about = screen.getByRole('region', { name: 'About' });
+    expect(await within(about).findByRole('alert')).toHaveProperty('textContent', 'Unavailable');
+  });
+
+  it('shows a load error when the site title cannot be fetched', async () => {
+    // App's own header load and the Pages form each make up to `attempts` requests.
+    for (let i = 0; i < 2 * publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/site$/, 503, { message: 'No site' });
+    await openAdmin('#/admin/pages');
+    const form = screen.getByRole('region', { name: 'Site title' });
+    expect(await within(form).findByRole('alert')).toHaveProperty('textContent', 'No site');
     expect(await screen.findByLabelText('Contact text')).toBeTruthy();
   });
 });

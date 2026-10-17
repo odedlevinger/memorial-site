@@ -46,6 +46,10 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
   web / email addresses are shown as links. No HTML.
 - Until an editor first saves a page, it shows built-in default text.
 
+**Site settings**
+- Title (required, ≤ 60 chars) and tagline (optional, ≤ 120 chars) — shown in the header,
+  footer and browser tab. Defaults: "Memory" / "a life in photographs".
+
 ## 3. Back office capabilities (Editor and Owner)
 
 1. List all topics (drafts included) in their current order; create, edit, delete a topic.
@@ -58,6 +62,7 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 7. Deleting a topic requires confirmation and deletes its pictures.
 8. Owner only: view, add and remove Editors (by email).
 9. Edit the text of the About and Contact pages.
+10. Edit the site title and tagline.
 
 ## 4. Public site behaviour
 

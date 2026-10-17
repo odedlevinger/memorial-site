@@ -49,6 +49,17 @@ export interface Page {
   readonly updatedAt: string | null;
 }
 
+/** The site's name and tagline, shown in the header. */
+export interface SiteInfo {
+  readonly title: string;
+  /** May be empty — the header then shows the title alone. */
+  readonly tagline: string;
+  readonly updatedAt: string | null;
+}
+
+/** Used if the site settings cannot be loaded (matches content-service's defaults). */
+export const DEFAULT_SITE: SiteInfo = { title: 'Memory', tagline: 'a life in photographs', updatedAt: null };
+
 export interface Editor {
   readonly email: string;
   readonly addedBy: string;
@@ -114,6 +125,7 @@ export const contentApi = {
   publicTopics: (): Promise<Topic[]> => publicCall('/public/topics'),
   publicTopic: (slug: string): Promise<TopicDetail> => publicCall(`/public/topics/${encodeURIComponent(slug)}`),
   publicPage: (slug: PageSlug): Promise<Page> => publicCall(`/public/pages/${slug}`),
+  publicSite: (): Promise<SiteInfo> => publicCall('/public/site'),
 
   /** The caller's back-office role; 'viewer' when signed out. */
   me: async (): Promise<Role> => {
@@ -141,6 +153,7 @@ export const contentApi = {
     call(`/topics/${topicId}/pictures/order`, json('PUT', { ids })),
 
   updatePage: (slug: PageSlug, body: string): Promise<Page> => call(`/pages/${slug}`, json('PUT', { body })),
+  updateSite: (title: string, tagline: string): Promise<SiteInfo> => call('/site', json('PUT', { title, tagline })),
 
   editors: (): Promise<Editor[]> => call('/editors'),
   addEditor: (email: string): Promise<Editor[]> => call('/editors', json('POST', { email })),

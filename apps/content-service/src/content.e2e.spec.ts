@@ -276,3 +276,26 @@ describe('pages (About / Contact)', () => {
     await http().put('/content/pages/about').set(as(OWNER)).send({}).expect(400);
   });
 });
+
+describe('site title', () => {
+  it('serves the defaults until an editor saves, then the trimmed saved values', async () => {
+    const res = await http().get('/content/public/site').expect(200);
+    expect(res.body).toEqual({ title: 'Memory', tagline: 'a life in photographs', updatedAt: null });
+    expect(res.headers['cache-control']).toBe('public, max-age=30');
+
+    await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);
+    const saved = await http().put('/content/site').set(as(EDITOR)).send({ title: '  Grandpa Lavi ', tagline: ' ' }).expect(200);
+    expect(saved.body).toEqual({ title: 'Grandpa Lavi', tagline: '', updatedAt: expect.any(String) });
+    await http().put('/content/site').set(as(OWNER)).send({ title: 'Lavi', tagline: '1940–2025' }).expect(200);
+    await http().get('/content/public/site').expect(200).expect((r) => expect(r.body).toMatchObject({ title: 'Lavi', tagline: '1940–2025' }));
+  });
+
+  it('requires an editor and a valid title and tagline', async () => {
+    await http().put('/content/site').send({ title: 'x', tagline: '' }).expect(401);
+    await http().put('/content/site').set(as(VIEWER)).send({ title: 'x', tagline: '' }).expect(403);
+    await http().put('/content/site').set(as(OWNER)).send({ title: '   ', tagline: '' }).expect(400);
+    await http().put('/content/site').set(as(OWNER)).send({ title: 'x'.repeat(61), tagline: '' }).expect(400);
+    await http().put('/content/site').set(as(OWNER)).send({ title: 'x', tagline: 'y'.repeat(121) }).expect(400);
+    await http().put('/content/site').set(as(OWNER)).send({ title: 'x' }).expect(400);
+  });
+});

@@ -1,7 +1,8 @@
 import { Controller, Get, Header, Param } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { PAGE_SLUGS, type PageView, type TopicDetailView, type TopicView } from '../interfaces/content.interfaces.js';
+import { PAGE_SLUGS, type PageView, type SiteView, type TopicDetailView, type TopicView } from '../interfaces/content.interfaces.js';
 import { PagesService } from '../services/pages.service.js';
+import { SiteService } from '../services/site.service.js';
 import { TopicsService } from '../services/topics.service.js';
 
 /** Public, unauthenticated reads (Kong lets /content-service/content/public/* through). */
@@ -11,6 +12,7 @@ export class PublicController {
   constructor(
     private readonly topics: TopicsService,
     private readonly pages: PagesService,
+    private readonly site: SiteService,
   ) {}
 
   @Get('health')
@@ -46,5 +48,13 @@ export class PublicController {
   @ApiResponse({ status: 404, description: 'No such page' })
   getPage(@Param('slug') slug: string): Promise<PageView> {
     return this.pages.get(slug);
+  }
+
+  @Get('public/site')
+  @Header('Cache-Control', 'public, max-age=30')
+  @ApiOperation({ summary: 'Site title and tagline' })
+  @ApiResponse({ status: 200, description: 'Site settings' })
+  getSite(): Promise<SiteView> {
+    return this.site.get();
   }
 }

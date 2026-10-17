@@ -78,3 +78,12 @@ export interface PageView {
   /** null while the page still shows its built-in default text. */
   readonly updatedAt: string | null;
 }
+
+/** The site's name and tagline, shown in the header. */
+export interface SiteView {
+  readonly title: string;
+  /** May be empty — the header then shows the title alone. */
+  readonly tagline: string;
+  /** null while the site still uses the built-in defaults. */
+  readonly updatedAt: string | null;
+}

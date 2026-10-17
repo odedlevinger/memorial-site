@@ -126,3 +126,16 @@ export class UpdatePageDto {
   @MaxLength(10000)
   body!: string;
 }
+
+export class UpdateSiteDto {
+  @ApiProperty({ maxLength: 60 })
+  @IsString()
+  @Matches(/\S/, { message: 'title must not be empty' })
+  @MaxLength(60)
+  title!: string;
+
+  @ApiProperty({ maxLength: 120, description: 'may be empty' })
+  @IsString()
+  @MaxLength(120)
+  tagline!: string;
+}
