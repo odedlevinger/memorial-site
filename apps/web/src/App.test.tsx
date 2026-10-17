@@ -263,7 +263,7 @@ describe('languages', () => {
     render(<App />);
     const again = await screen.findByRole('navigation', { name: 'ראשי' });
     expect(within(again).getByRole('link', { name: 'על האתר' })).toBeTruthy();
-    fireEvent.click(within(again).getByRole('button', { name: 'English' }));
+    fireEvent.click(within(screen.getByRole('group', { name: 'שפה' })).getByRole('button', { name: 'English' }));
     expect(await screen.findByRole('navigation', { name: 'Main' })).toBeTruthy();
   });
 
