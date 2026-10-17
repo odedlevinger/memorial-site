@@ -27,10 +27,6 @@ resource "google_cloud_scheduler_job" "keep_warm" {
 
   attempt_deadline = "60s"
 
-  retry_config {
-    retry_count = 0
-  }
-
   http_target {
     http_method = "GET"
     uri         = "${data.google_cloud_run_service.web.status[0].url}/api/content/public/topics"

@@ -23,7 +23,3 @@ gcloud compute routers nats describe cloud-nat --router=nat-router \
   --region="$REGION" --project="$PROJECT" --format="value(name)" >/dev/null
 echo "  ✓ Cloud NAT exists"
 
-echo "Checking VPC Access Connector 'memorial-site-connector'..."
-gcloud compute networks vpc-access connectors describe memorial-site-connector \
-  --region="$REGION" --project="$PROJECT" --format="value(name)" >/dev/null
-echo "  ✓ VPC Access Connector exists"
