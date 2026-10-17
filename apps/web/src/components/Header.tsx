@@ -64,25 +64,62 @@ export function Header({ site, topics, role }: HeaderProps): ReactElement {
   );
 }
 
-/** One flag per language, named in its own language; an empty slot when there is only one. */
+/**
+ * Only the current language's flag shows; it opens a list of the others (flag and name, in
+ * their own language). An empty slot keeps the title centred when there is one language.
+ */
 function LanguageSwitch(): ReactElement {
   const { languages, current, setLanguage, t } = useI18n();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return (): void => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   if (languages.length < 2) return <span className="lang-switch" />;
   return (
     <div className="lang-switch" role="group" aria-label={t('nav.language')}>
-      {languages.map((l) => (
-        <button
-          key={l.code}
-          type="button"
-          lang={l.code}
-          aria-label={l.name}
-          title={l.name}
-          aria-pressed={l.code === current.code}
-          onClick={(): void => setLanguage(l.code)}
-        >
-          <Flag code={l.code} />
-        </button>
-      ))}
+      <button
+        type="button"
+        className="lang-current"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-label={`${t('nav.language')}: ${current.name}`}
+        title={current.name}
+        onClick={(): void => setOpen((o) => !o)}
+      >
+        <Flag code={current.code} />
+      </button>
+      {open && (
+        <>
+          <div className="lang-backdrop" onClick={(): void => setOpen(false)} aria-hidden="true" />
+          <ul className="lang-menu">
+            {languages
+              .filter((l) => l.code !== current.code)
+              .map((l) => (
+                <li key={l.code}>
+                  <button
+                    type="button"
+                    lang={l.code}
+                    dir={l.direction}
+                    onClick={(): void => {
+                      setLanguage(l.code);
+                      setOpen(false);
+                    }}
+                  >
+                    <Flag code={l.code} />
+                    <span>{l.name}</span>
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

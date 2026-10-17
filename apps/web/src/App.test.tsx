@@ -245,9 +245,13 @@ describe('languages', () => {
     server.site.translations = { he: { title: 'זיכרון' } };
     const { unmount } = render(<App />);
     const switcher = await screen.findByRole('group', { name: 'Language' });
-    expect(within(switcher).getByRole('button', { name: 'English' }).getAttribute('aria-pressed')).toBe('true');
+    const flag = within(switcher).getByRole('button', { name: 'Language: English' });
+    expect(within(switcher).queryByRole('button', { name: 'עברית' })).toBeNull(); // only the current flag shows
     expect(document.documentElement.dir).toBe('ltr');
 
+    fireEvent.click(flag);
+    expect(flag.getAttribute('aria-expanded')).toBe('true');
+    expect(within(switcher).queryByRole('button', { name: 'English' })).toBeNull(); // lists the others
     fireEvent.click(within(switcher).getByRole('button', { name: 'עברית' }));
     const nav = await screen.findByRole('navigation', { name: 'ראשי' });
     expect(await within(nav).findByRole('link', { name: 'רחובות' })).toBeTruthy();
@@ -263,7 +267,9 @@ describe('languages', () => {
     render(<App />);
     const again = await screen.findByRole('navigation', { name: 'ראשי' });
     expect(within(again).getByRole('link', { name: 'על האתר' })).toBeTruthy();
-    fireEvent.click(within(screen.getByRole('group', { name: 'שפה' })).getByRole('button', { name: 'English' }));
+    const hebrew = screen.getByRole('group', { name: 'שפה' });
+    fireEvent.click(within(hebrew).getByRole('button', { name: 'שפה: עברית' }));
+    fireEvent.click(within(hebrew).getByRole('button', { name: 'English' }));
     expect(await screen.findByRole('navigation', { name: 'Main' })).toBeTruthy();
   });
 
