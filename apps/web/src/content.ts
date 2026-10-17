@@ -39,6 +39,16 @@ export interface TopicDetail extends Topic {
   readonly pictures: readonly Picture[];
 }
 
+export type PageSlug = 'about' | 'contact';
+
+/** About / Contact text: plain text, paragraphs separated by blank lines. */
+export interface Page {
+  readonly slug: PageSlug;
+  readonly body: string;
+  /** null while the page still shows its built-in default text. */
+  readonly updatedAt: string | null;
+}
+
 export interface Editor {
   readonly email: string;
   readonly addedBy: string;
@@ -103,6 +113,7 @@ const file = (field: string, f: File): FormData => {
 export const contentApi = {
   publicTopics: (): Promise<Topic[]> => publicCall('/public/topics'),
   publicTopic: (slug: string): Promise<TopicDetail> => publicCall(`/public/topics/${encodeURIComponent(slug)}`),
+  publicPage: (slug: PageSlug): Promise<Page> => publicCall(`/public/pages/${slug}`),
 
   /** The caller's back-office role; 'viewer' when signed out. */
   me: async (): Promise<Role> => {
@@ -128,6 +139,8 @@ export const contentApi = {
   deletePicture: (id: string): Promise<void> => call(`/pictures/${id}`, { method: 'DELETE' }),
   reorderPictures: (topicId: string, ids: readonly string[]): Promise<Picture[]> =>
     call(`/topics/${topicId}/pictures/order`, json('PUT', { ids })),
+
+  updatePage: (slug: PageSlug, body: string): Promise<Page> => call(`/pages/${slug}`, json('PUT', { body })),
 
   editors: (): Promise<Editor[]> => call('/editors'),
   addEditor: (email: string): Promise<Editor[]> => call('/editors', json('POST', { email })),

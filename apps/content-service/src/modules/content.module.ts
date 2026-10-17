@@ -4,10 +4,12 @@ import { TypeOrmModule, type TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { Storage } from '@google-cloud/storage';
 import { AuditLogEntity } from '../entities/audit-log.entity.js';
 import { EditorEntity } from '../entities/editor.entity.js';
+import { PageEntity } from '../entities/page.entity.js';
 import { PictureEntity } from '../entities/picture.entity.js';
 import { TopicEntity } from '../entities/topic.entity.js';
 import { EditorsController } from '../controllers/editors.controller.js';
 import { MeController } from '../controllers/me.controller.js';
+import { PagesController } from '../controllers/pages.controller.js';
 import { PicturesController } from '../controllers/pictures.controller.js';
 import { PublicController } from '../controllers/public.controller.js';
 import { TopicsController } from '../controllers/topics.controller.js';
@@ -18,12 +20,13 @@ import { EditorsService } from '../services/editors.service.js';
 import { IdentityService } from '../services/identity.service.js';
 import { GcsImageStore, IMAGE_STORE, LocalImageStore } from '../services/image-store.service.js';
 import { ImagesService } from '../services/images.service.js';
+import { PagesService } from '../services/pages.service.js';
 import { PicturesService } from '../services/pictures.service.js';
 import { IDENTITY_LOOKUP, RolesService } from '../services/roles.service.js';
 import { SeedService } from '../services/seed.service.js';
 import { TopicsService } from '../services/topics.service.js';
 
-export const ENTITIES = [TopicEntity, PictureEntity, EditorEntity, AuditLogEntity];
+export const ENTITIES = [TopicEntity, PictureEntity, EditorEntity, PageEntity, AuditLogEntity];
 
 /** Cloud Storage when STORAGE_BUCKET is set, otherwise a local folder (docker-compose dev). */
 export function imageStoreFactory(config: ConfigService): ImageStore {
@@ -53,7 +56,7 @@ export function typeOrmOptions(config: ConfigService): TypeOrmModuleOptions {
     TypeOrmModule.forRootAsync({ imports: [ConfigModule], useFactory: typeOrmOptions, inject: [ConfigService] }),
     TypeOrmModule.forFeature(ENTITIES),
   ],
-  controllers: [PublicController, MeController, TopicsController, PicturesController, EditorsController],
+  controllers: [PublicController, MeController, TopicsController, PicturesController, EditorsController, PagesController],
   providers: [
     { provide: IMAGE_STORE, useFactory: imageStoreFactory, inject: [ConfigService] },
     IdentityService,
@@ -65,6 +68,7 @@ export function typeOrmOptions(config: ConfigService): TypeOrmModuleOptions {
     TopicsService,
     PicturesService,
     EditorsService,
+    PagesService,
     SeedService,
   ],
 })

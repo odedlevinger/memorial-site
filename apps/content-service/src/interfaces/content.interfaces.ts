@@ -66,3 +66,15 @@ export interface ImageStore {
   remove(prefix: string): Promise<void>;
   publicUrl(path: string): string;
 }
+
+/** The fixed site pages whose text editors can change. */
+export type PageSlug = 'about' | 'contact';
+export const PAGE_SLUGS: readonly PageSlug[] = ['about', 'contact'];
+
+/** A site page's text: plain text, paragraphs separated by blank lines. */
+export interface PageView {
+  readonly slug: PageSlug;
+  readonly body: string;
+  /** null while the page still shows its built-in default text. */
+  readonly updatedAt: string | null;
+}

@@ -40,6 +40,12 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 - Position — order within its topic.
 - Status — `draft` or `published`.
 
+**Page** (About, Contact)
+- Fixed set: `about` and `contact` — pages cannot be added or removed.
+- Text (required, ≤ 10,000 chars) — plain text; a blank line starts a new paragraph, and
+  web / email addresses are shown as links. No HTML.
+- Until an editor first saves a page, it shows built-in default text.
+
 ## 3. Back office capabilities (Editor and Owner)
 
 1. List all topics (drafts included) in their current order; create, edit, delete a topic.
@@ -51,6 +57,7 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 6. Publish / hide a picture.
 7. Deleting a topic requires confirmation and deletes its pictures.
 8. Owner only: view, add and remove Editors (by email).
+9. Edit the text of the About and Contact pages.
 
 ## 4. Public site behaviour
 
@@ -58,6 +65,7 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
   in the editor-defined order.
 - A published topic with no published pictures is not shown.
 - The viewer shows caption, date, place and story when present.
+- The About and Contact pages show their current text.
 - Changes are visible on the public site within 1 minute of saving.
 
 ## 5. Placeholders

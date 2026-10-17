@@ -1,13 +1,17 @@
 import { Controller, Get, Header, Param } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import type { TopicDetailView, TopicView } from '../interfaces/content.interfaces.js';
+import { PAGE_SLUGS, type PageView, type TopicDetailView, type TopicView } from '../interfaces/content.interfaces.js';
+import { PagesService } from '../services/pages.service.js';
 import { TopicsService } from '../services/topics.service.js';
 
 /** Public, unauthenticated reads (Kong lets /content-service/content/public/* through). */
 @ApiTags('public')
 @Controller('content')
 export class PublicController {
-  constructor(private readonly topics: TopicsService) {}
+  constructor(
+    private readonly topics: TopicsService,
+    private readonly pages: PagesService,
+  ) {}
 
   @Get('health')
   @ApiOperation({ summary: 'Liveness check' })
@@ -32,5 +36,15 @@ export class PublicController {
   @ApiResponse({ status: 404, description: 'No such published topic' })
   getTopic(@Param('slug') slug: string): Promise<TopicDetailView> {
     return this.topics.getPublished(slug);
+  }
+
+  @Get('public/pages/:slug')
+  @Header('Cache-Control', 'public, max-age=30')
+  @ApiOperation({ summary: 'Text of the About or Contact page' })
+  @ApiParam({ name: 'slug', enum: PAGE_SLUGS })
+  @ApiResponse({ status: 200, description: 'Page text' })
+  @ApiResponse({ status: 404, description: 'No such page' })
+  getPage(@Param('slug') slug: string): Promise<PageView> {
+    return this.pages.get(slug);
   }
 }

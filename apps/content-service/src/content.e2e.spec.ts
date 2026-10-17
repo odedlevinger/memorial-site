@@ -251,3 +251,28 @@ describe('pictures', () => {
     expect(after.body.pictures.map((p: { id: string }) => p.id)).toEqual([p1!.id]);
   });
 });
+
+describe('pages (About / Contact)', () => {
+  it('serves default text until an editor saves, then the saved text', async () => {
+    const about = await http().get('/content/public/pages/about').expect(200);
+    expect(about.body).toMatchObject({ slug: 'about', updatedAt: null, body: expect.stringContaining('life worth remembering') });
+    expect(about.headers['cache-control']).toBe('public, max-age=30');
+    await http().get('/content/public/pages/contact').expect(200);
+    await http().get('/content/public/pages/nope').expect(404);
+
+    await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);
+    const saved = await http().put('/content/pages/contact').set(as(EDITOR)).send({ body: 'Write to us.\n\nfamily@example.com' }).expect(200);
+    expect(saved.body).toMatchObject({ slug: 'contact', body: 'Write to us.\n\nfamily@example.com', updatedAt: expect.any(String) });
+    await http().put('/content/pages/contact').set(as(OWNER)).send({ body: 'Updated.' }).expect(200);
+    await http().get('/content/public/pages/contact').expect(200).expect((res) => expect(res.body.body).toBe('Updated.'));
+  });
+
+  it('requires an editor, a known page and valid text', async () => {
+    await http().put('/content/pages/about').send({ body: 'x' }).expect(401);
+    await http().put('/content/pages/about').set(as(VIEWER)).send({ body: 'x' }).expect(403);
+    await http().put('/content/pages/nope').set(as(OWNER)).send({ body: 'x' }).expect(404);
+    await http().put('/content/pages/about').set(as(OWNER)).send({ body: '' }).expect(400);
+    await http().put('/content/pages/about').set(as(OWNER)).send({ body: 'x'.repeat(10001) }).expect(400);
+    await http().put('/content/pages/about').set(as(OWNER)).send({}).expect(400);
+  });
+});

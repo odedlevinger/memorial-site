@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import type { Role } from '../content';
 import { hrefFor, type Route } from '../route';
 import { AdminEditors } from './AdminEditors';
+import { AdminPages } from './AdminPages';
 import { AdminTopic } from './AdminTopic';
 import { AdminTopics } from './AdminTopics';
 
@@ -27,7 +28,8 @@ export function AdminApp({ route, role, onContentChanged }: AdminAppProps): Reac
   return (
     <section className="admin">
       <nav className="admin-tabs" aria-label="Back office">
-        <a href={hrefFor({ page: 'admin' })} aria-current={route.page !== 'admin-editors' ? 'page' : undefined}>Topics</a>
+        <a href={hrefFor({ page: 'admin' })} aria-current={route.page === 'admin' || route.page === 'admin-topic' ? 'page' : undefined}>Topics</a>
+        <a href={hrefFor({ page: 'admin-pages' })} aria-current={route.page === 'admin-pages' ? 'page' : undefined}>Pages</a>
         {role === 'owner' && (
           <a href={hrefFor({ page: 'admin-editors' })} aria-current={route.page === 'admin-editors' ? 'page' : undefined}>Editors</a>
         )}
@@ -36,6 +38,8 @@ export function AdminApp({ route, role, onContentChanged }: AdminAppProps): Reac
         <AdminTopic key={route.id} id={route.id} onChanged={onContentChanged} />
       ) : route.page === 'admin-editors' && role === 'owner' ? (
         <AdminEditors />
+      ) : route.page === 'admin-pages' ? (
+        <AdminPages />
       ) : (
         <AdminTopics onChanged={onContentChanged} />
       )}
