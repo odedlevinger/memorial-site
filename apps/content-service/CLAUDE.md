@@ -10,13 +10,13 @@ work order: [tasks.md](tasks.md).
 src/
 ├── main.ts                     Bootstrap, ValidationPipe, Swagger, local file serving
 ├── modules/content.module.ts   Wiring; imageStoreFactory (GCS vs local); typeOrmOptions
-├── controllers/                public · me · topics · pictures · editors · pages · site · languages
+├── controllers/                public · me · topics · pictures · editors · pages · site · languages · activity
 ├── services/                   topics · pictures · images (sharp) · image-store · editors
-│                               pages · site · languages · translations (helpers)
+│                               pages · site · languages · translations (helpers) · activity
 │                               roles · identity (auth-service lookup) · audit · seed
 ├── guards/roles.guard.ts       X-User-Id → Caller; @RequireRole('editor' | 'owner')
 ├── dto/content.dto.ts          class-validator DTOs (limits from SPEC §2)
-├── entities/                   topic · picture · editor · page · site · language · audit-log
+├── entities/                   topic · picture · editor · page · site · language · daily-sign-in · audit-log
 ├── interfaces/                 contracts (views, Caller, ImageStore, IdentityLookup)
 └── testing/harness.ts          in-memory SQLite app + fakes (test-only, not covered)
 ```
@@ -38,4 +38,7 @@ src/
   Controllers turn `?lang=` into a `LangContext` via `LanguagesService.context` (lenient for
   public reads, strict — 400 on unknown codes — for writes). Changing the default language
   rewrites every row's columns (`switchDefault`) in one transaction.
+- **Activity**: `GET /content/me` (called on every page load by signed-in people) records
+  one `daily_sign_ins` row per person per day (insert-or-ignore). `GET /content/activity`
+  (editors) returns daily counts; days follow `SITE_TIME_ZONE`.
 - Tests: `npm test` (Jest, in-memory SQLite via `testing/harness.ts`); 100 % coverage gate.

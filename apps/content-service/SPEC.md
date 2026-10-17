@@ -82,6 +82,10 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 11. Add, rename and remove languages, set each one's text direction and labels, and choose
     the default language.
 12. Edit every translatable field (§2) in any of the site's languages.
+13. See an activity chart: how many signed-in people used the site each day (last 7, 30 or
+    90 days, in the site's time zone, `SITE_TIME_ZONE`, default Asia/Jerusalem). A person
+    counts once per day however many visits, sessions or devices; only the day and user id
+    are stored. Visitors who don't sign in are not counted.
 
 ## 4. Public site behaviour
 

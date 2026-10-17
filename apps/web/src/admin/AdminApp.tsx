@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import type { Language, Role } from '../content';
 import { useI18n } from '../i18n';
 import { hrefFor, type Route } from '../route';
+import { AdminActivity } from './AdminActivity';
 import { AdminEditors } from './AdminEditors';
 import { AdminLanguages } from './AdminLanguages';
 import { AdminPages } from './AdminPages';
@@ -43,6 +44,7 @@ export function AdminApp({ route, role, onContentChanged }: AdminAppProps): Reac
         {tab({ page: 'admin' }, 'Topics', route.page === 'admin' || route.page === 'admin-topic')}
         {tab({ page: 'admin-pages' }, 'Pages')}
         {tab({ page: 'admin-languages' }, 'Languages')}
+        {tab({ page: 'admin-activity' }, 'Activity')}
         {role === 'owner' && tab({ page: 'admin-editors' }, 'Editors')}
       </nav>
       {translatable && languages.length > 1 && (
@@ -56,6 +58,8 @@ export function AdminApp({ route, role, onContentChanged }: AdminAppProps): Reac
         <AdminPages lang={editLang} onChanged={onContentChanged} />
       ) : route.page === 'admin-languages' ? (
         <AdminLanguages onChanged={onContentChanged} />
+      ) : route.page === 'admin-activity' ? (
+        <AdminActivity />
       ) : (
         <AdminTopics onChanged={onContentChanged} />
       )}

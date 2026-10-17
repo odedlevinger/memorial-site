@@ -79,6 +79,20 @@ export interface SiteInfo {
 /** Used if the site settings cannot be loaded (matches content-service's defaults). */
 export const DEFAULT_SITE: SiteInfo = { title: 'Memory', tagline: 'a life in photographs', updatedAt: null };
 
+/** Signed-in people on one day (site time zone). */
+export interface DailyCount {
+  /** YYYY-MM-DD */
+  readonly day: string;
+  readonly count: number;
+}
+
+/** Signed-in people per day, oldest first, plus different people over the whole period. */
+export interface Activity {
+  readonly timeZone: string;
+  readonly days: readonly DailyCount[];
+  readonly people: number;
+}
+
 export interface Editor {
   readonly email: string;
   readonly addedBy: string;
@@ -185,6 +199,8 @@ export const contentApi = {
   updateLanguage: (code: string, patch: LanguagePatch): Promise<Language[]> =>
     call(`/languages/${encodeURIComponent(code)}`, json('PATCH', patch)),
   removeLanguage: (code: string): Promise<Language[]> => call(`/languages/${encodeURIComponent(code)}`, { method: 'DELETE' }),
+
+  activity: (days: number): Promise<Activity> => call(`/activity?days=${days}`),
 
   editors: (): Promise<Editor[]> => call('/editors'),
   addEditor: (email: string): Promise<Editor[]> => call('/editors', json('POST', { email })),

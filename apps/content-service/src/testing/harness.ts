@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import sharp from 'sharp';
+import { ActivityController } from '../controllers/activity.controller.js';
 import { EditorsController } from '../controllers/editors.controller.js';
 import { LanguagesController } from '../controllers/languages.controller.js';
 import { MeController } from '../controllers/me.controller.js';
@@ -16,6 +17,7 @@ import { TopicsController } from '../controllers/topics.controller.js';
 import { RolesGuard } from '../guards/roles.guard.js';
 import type { IdentityLookup, ImageStore } from '../interfaces/content.interfaces.js';
 import { ENTITIES } from '../modules/content.module.js';
+import { ActivityService } from '../services/activity.service.js';
 import { AuditService } from '../services/audit.service.js';
 import { EditorsService } from '../services/editors.service.js';
 import { LanguagesService } from '../services/languages.service.js';
@@ -64,7 +66,7 @@ export async function createHarness(): Promise<Harness> {
       TypeOrmModule.forRoot({ type: 'better-sqlite3', database: ':memory:', entities: ENTITIES, synchronize: true }),
       TypeOrmModule.forFeature(ENTITIES),
     ],
-    controllers: [PublicController, MeController, TopicsController, PicturesController, EditorsController, PagesController, SiteController, LanguagesController],
+    controllers: [PublicController, MeController, TopicsController, PicturesController, EditorsController, PagesController, SiteController, LanguagesController, ActivityController],
     providers: [
       { provide: IMAGE_STORE, useValue: store },
       { provide: IDENTITY_LOOKUP, useValue: fakeIdentity },
@@ -78,6 +80,7 @@ export async function createHarness(): Promise<Harness> {
       PagesService,
       SiteService,
     LanguagesService,
+    ActivityService,
     ],
   }).compile();
   const app = moduleRef.createNestApplication();
