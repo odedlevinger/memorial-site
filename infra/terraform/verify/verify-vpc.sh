@@ -12,14 +12,3 @@ echo "Checking subnet 'services'..."
 gcloud compute networks subnets describe services \
   --region="$REGION" --project="$PROJECT" --format="value(name)" >/dev/null
 echo "  ✓ Subnet exists"
-
-echo "Checking Cloud Router 'nat-router'..."
-gcloud compute routers describe nat-router \
-  --region="$REGION" --project="$PROJECT" --format="value(name)" >/dev/null
-echo "  ✓ Router exists"
-
-echo "Checking Cloud NAT 'cloud-nat'..."
-gcloud compute routers nats describe cloud-nat --router=nat-router \
-  --region="$REGION" --project="$PROJECT" --format="value(name)" >/dev/null
-echo "  ✓ Cloud NAT exists"
-
