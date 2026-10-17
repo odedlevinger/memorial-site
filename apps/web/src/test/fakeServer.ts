@@ -44,6 +44,9 @@ export class FakeServer {
     contact: { slug: 'contact', body: 'Get in touch.', updatedAt: null, translations: {} },
   };
   languages: Language[] = [{ code: 'en', name: 'English', direction: 'ltr', isDefault: true, labels: {} }];
+  /** Signed-in people per day, oldest first, as GET /activity returns them (last N). */
+  activity: Array<{ day: string; count: number }> = [];
+  activityPeople = 0;
   /** "METHOD path" of every request (no query string). */
   readonly calls: string[] = [];
   /** "METHOD path?query" of every request. */
@@ -99,11 +102,13 @@ export class FakeServer {
     const known = this.languages.find((l) => l.code === code);
     if (code && !known && method !== 'GET') return this.json({ message: `Unknown language "${code}"` }, 400);
     this.lang = known ?? this.defaultLanguage();
+    this.query = url.searchParams;
     return this.route(method, url.pathname, body);
   };
 
   /** The request's language (unknown / missing = the default), set per request. */
   private lang: Lang = { code: 'en', isDefault: true };
+  private query = new URLSearchParams();
 
   private defaultLanguage(): Language {
     return this.languages.find((l) => l.isDefault)!;
@@ -168,6 +173,10 @@ export class FakeServer {
     }
     if (p === '/languages' || p.startsWith('/languages/')) return this.languagesRoute(method, p, body);
     if (p === '/editors' || p.startsWith('/editors/')) return this.editorsRoute(method, p, body);
+    if (p === '/activity' && method === 'GET') {
+      const days = Number(this.query.get('days'));
+      return this.json({ timeZone: 'Asia/Jerusalem', days: this.activity.slice(-days), people: this.activityPeople });
+    }
     if (p === '/topics' && method === 'GET') return this.json(this.topics.map((t) => this.view(t, false)));
     if (p === '/topics' && method === 'POST') {
       const t: TopicRow = { id: uid(), slug: String(body['title']).toLowerCase(), title: String(body['title']), description: null, status: 'draft', coverPictureId: null, translations: {} };

@@ -857,3 +857,125 @@ button.status {
 .admin-lang select {
   width: auto;
 }
+
+/* ── Back office: activity chart ────────────────────────────────────────── */
+.admin {
+  --series-1: #2a78d6; /* validated against --paper: lightness, chroma, contrast >= 3:1 */
+  --chart-grid: #e4e0d8;
+}
+
+.chart-filters {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.chart-filters .btn[aria-pressed='true'] {
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.stat-value {
+  font-size: 3rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.chart {
+  position: relative;
+}
+
+.chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.chart-axis {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.chart-bar {
+  fill: var(--series-1);
+}
+
+.chart-hit {
+  fill: transparent;
+  cursor: default;
+}
+
+.chart-hit:hover,
+.chart-hit:focus {
+  fill: rgba(27, 27, 27, 0.05);
+  outline: none;
+}
+
+.chart-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 6px)); /* just above the hovered bar */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.35rem 0.6rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 0.375rem;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.chart-tooltip strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.chart-table {
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.chart-table summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.chart-table table {
+  margin-top: 0.75rem;
+  border-collapse: collapse;
+}
+
+.chart-table th,
+.chart-table td {
+  padding: 0.3rem 1.5rem 0.3rem 0;
+  text-align: start;
+  border-bottom: 1px solid var(--rule);
+}
+
+.chart-table td:last-child {
+  font-variant-numeric: tabular-nums;
+}

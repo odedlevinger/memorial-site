@@ -122,3 +122,18 @@ export interface LangContext {
   readonly code: string;
   readonly defaultCode: string;
 }
+
+/** Signed-in people on one day (site time zone). */
+export interface DailyCount {
+  /** YYYY-MM-DD */
+  readonly day: string;
+  readonly count: number;
+}
+
+/** Back-office activity: signed-in people per day, oldest day first, days without visits as 0. */
+export interface ActivityView {
+  readonly timeZone: string;
+  readonly days: readonly DailyCount[];
+  /** Different people over the whole period (someone on several days counts once). */
+  readonly people: number;
+}

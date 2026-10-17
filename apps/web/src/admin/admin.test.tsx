@@ -441,3 +441,48 @@ describe('languages', () => {
     expect(screen.queryByLabelText('Editing language')).toBeNull();
   });
 });
+
+describe('activity', () => {
+  const day = (i: number): string => new Date(Date.UTC(2026, 9, 17) - (89 - i) * 86_400_000).toISOString().slice(0, 10);
+
+  beforeEach(() => {
+    server.activity = Array.from({ length: 90 }, (_, i) => ({ day: day(i), count: i === 89 ? 1 : i % 3 }));
+    server.activityPeople = 4;
+  });
+
+  it('charts signed-in people per day for 7, 30 or 90 days, with a table view', async () => {
+    server.role = 'editor';
+    await openAdmin('#/admin/activity');
+    expect(screen.getByRole('link', { name: 'Activity' }).getAttribute('aria-current')).toBe('page');
+    expect(await screen.findByText('4')).toBeTruthy();
+    expect(screen.getByText(/different people signed in over the last 30 days · 1 today/)).toBeTruthy();
+    expect(server.urls).toContain('GET /api/content/activity?days=30');
+    const chart = screen.getByRole('group', { name: 'Signed-in people per day' });
+    expect(chart.querySelectorAll('.chart-bar')).toHaveLength(server.activity.slice(-30).filter((d) => d.count > 0).length);
+    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(31);
+
+    const today = within(chart).getByLabelText('Sat, Oct 17, 2026: 1 person');
+    fireEvent.mouseEnter(today);
+    expect(screen.getByRole('status').textContent).toBe('1 personSat, Oct 17, 2026');
+    fireEvent.mouseLeave(today);
+    expect(screen.queryByRole('status')).toBeNull();
+    fireEvent.focus(within(chart).getByLabelText('Thu, Oct 15, 2026: 0 people'));
+    expect(screen.getByRole('status').textContent).toContain('0 people');
+    fireEvent.blur(within(chart).getByLabelText('Thu, Oct 15, 2026: 0 people'));
+
+    fireEvent.click(screen.getByRole('button', { name: '7 days' }));
+    expect(await screen.findByText(/over the last 7 days/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: '7 days' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: '90 days' }));
+    expect(await screen.findByText(/over the last 90 days/)).toBeTruthy();
+  });
+
+  it('says “person” for one, and shows a load error', async () => {
+    server.activityPeople = 1;
+    await openAdmin('#/admin/activity');
+    expect(await screen.findByText(/different person signed in/)).toBeTruthy();
+    server.failNext(/GET \/api\/content\/activity$/, 500, { message: 'Stats unavailable' });
+    fireEvent.click(screen.getByRole('button', { name: '7 days' }));
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Stats unavailable');
+  });
+});

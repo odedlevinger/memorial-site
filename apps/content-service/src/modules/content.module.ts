@@ -3,12 +3,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, type TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { Storage } from '@google-cloud/storage';
 import { AuditLogEntity } from '../entities/audit-log.entity.js';
+import { DailySignInEntity } from '../entities/daily-sign-in.entity.js';
 import { EditorEntity } from '../entities/editor.entity.js';
 import { LanguageEntity } from '../entities/language.entity.js';
 import { PageEntity } from '../entities/page.entity.js';
 import { SiteEntity } from '../entities/site.entity.js';
 import { PictureEntity } from '../entities/picture.entity.js';
 import { TopicEntity } from '../entities/topic.entity.js';
+import { ActivityController } from '../controllers/activity.controller.js';
 import { EditorsController } from '../controllers/editors.controller.js';
 import { LanguagesController } from '../controllers/languages.controller.js';
 import { MeController } from '../controllers/me.controller.js';
@@ -19,6 +21,7 @@ import { PublicController } from '../controllers/public.controller.js';
 import { TopicsController } from '../controllers/topics.controller.js';
 import { RolesGuard } from '../guards/roles.guard.js';
 import type { ImageStore } from '../interfaces/content.interfaces.js';
+import { ActivityService } from '../services/activity.service.js';
 import { AuditService } from '../services/audit.service.js';
 import { EditorsService } from '../services/editors.service.js';
 import { LanguagesService } from '../services/languages.service.js';
@@ -32,7 +35,7 @@ import { IDENTITY_LOOKUP, RolesService } from '../services/roles.service.js';
 import { SeedService } from '../services/seed.service.js';
 import { TopicsService } from '../services/topics.service.js';
 
-export const ENTITIES = [TopicEntity, PictureEntity, EditorEntity, PageEntity, SiteEntity, LanguageEntity, AuditLogEntity];
+export const ENTITIES = [TopicEntity, PictureEntity, EditorEntity, PageEntity, SiteEntity, LanguageEntity, DailySignInEntity, AuditLogEntity];
 
 /** Cloud Storage when STORAGE_BUCKET is set, otherwise a local folder (docker-compose dev). */
 export function imageStoreFactory(config: ConfigService): ImageStore {
@@ -62,7 +65,7 @@ export function typeOrmOptions(config: ConfigService): TypeOrmModuleOptions {
     TypeOrmModule.forRootAsync({ imports: [ConfigModule], useFactory: typeOrmOptions, inject: [ConfigService] }),
     TypeOrmModule.forFeature(ENTITIES),
   ],
-  controllers: [PublicController, MeController, TopicsController, PicturesController, EditorsController, PagesController, SiteController, LanguagesController],
+  controllers: [PublicController, MeController, TopicsController, PicturesController, EditorsController, PagesController, SiteController, LanguagesController, ActivityController],
   providers: [
     { provide: IMAGE_STORE, useFactory: imageStoreFactory, inject: [ConfigService] },
     IdentityService,
@@ -77,6 +80,7 @@ export function typeOrmOptions(config: ConfigService): TypeOrmModuleOptions {
     PagesService,
     SiteService,
     LanguagesService,
+    ActivityService,
     SeedService,
   ],
 })

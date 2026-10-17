@@ -17,6 +17,7 @@ describe('parseRoute', () => {
     ['#/admin/editors', { page: 'admin-editors' }],
     ['#/admin/pages', { page: 'admin-pages' }],
     ['#/admin/languages', { page: 'admin-languages' }],
+    ['#/admin/activity', { page: 'admin-activity' }],
     ['#/admin/topics/t1', { page: 'admin-topic', id: 't1' }],
     ['#/admin/topics', { page: 'not-found' }],
     ['#/admin/nope', { page: 'not-found' }],
@@ -36,6 +37,7 @@ describe('hrefFor', () => {
     expect(hrefFor({ page: 'admin-editors' })).toBe('#/admin/editors');
     expect(hrefFor({ page: 'admin-pages' })).toBe('#/admin/pages');
     expect(hrefFor({ page: 'admin-languages' })).toBe('#/admin/languages');
+    expect(hrefFor({ page: 'admin-activity' })).toBe('#/admin/activity');
     expect(hrefFor({ page: 'admin-topic', id: 't1' })).toBe('#/admin/topics/t1');
   });
 });
