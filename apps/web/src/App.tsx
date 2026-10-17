@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { contentApi, type Role, type Topic } from './content';
+import { contentApi, DEFAULT_SITE, type Role, type SiteInfo, type Topic } from './content';
 import { useRoute, type Route } from './route';
 import { Header } from './components/Header';
 import { Home } from './components/Home';
@@ -14,6 +14,7 @@ export default function App(): ReactElement {
   const route = useRoute();
   const [topics, setTopics] = useState<readonly Topic[] | null>(null);
   const [role, setRole] = useState<Role>('viewer');
+  const [site, setSite] = useState<SiteInfo | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [version, setVersion] = useState(0);
   const refresh = useCallback((): void => setVersion((v) => v + 1), []);
@@ -25,15 +26,23 @@ export default function App(): ReactElement {
       (list) => active && setTopics(list),
       () => active && setLoadFailed(true),
     );
+    contentApi.publicSite().then(
+      (s) => active && setSite(s),
+      () => active && setSite(DEFAULT_SITE),
+    );
     void contentApi.me().then((r) => active && setRole(r));
     return (): void => {
       active = false;
     };
   }, [version]);
 
+  useEffect(() => {
+    if (site) document.title = site.title;
+  }, [site]);
+
   return (
     <div className="site">
-      <Header topics={topics ?? []} role={role} />
+      <Header site={site} topics={topics ?? []} role={role} />
       <main className="site-main">
         {topics !== null ? (
           renderPage(route, topics, role, refresh)
@@ -49,7 +58,7 @@ export default function App(): ReactElement {
         )}
       </main>
       <footer className="site-footer">
-        <p>© {new Date().getFullYear()} Memory</p>
+        <p>© {new Date().getFullYear()} {site?.title}</p>
       </footer>
     </div>
   );

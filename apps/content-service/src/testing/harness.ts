@@ -8,6 +8,7 @@ import sharp from 'sharp';
 import { EditorsController } from '../controllers/editors.controller.js';
 import { MeController } from '../controllers/me.controller.js';
 import { PagesController } from '../controllers/pages.controller.js';
+import { SiteController } from '../controllers/site.controller.js';
 import { PicturesController } from '../controllers/pictures.controller.js';
 import { PublicController } from '../controllers/public.controller.js';
 import { TopicsController } from '../controllers/topics.controller.js';
@@ -19,6 +20,7 @@ import { EditorsService } from '../services/editors.service.js';
 import { IMAGE_STORE } from '../services/image-store.service.js';
 import { ImagesService } from '../services/images.service.js';
 import { PagesService } from '../services/pages.service.js';
+import { SiteService } from '../services/site.service.js';
 import { PicturesService } from '../services/pictures.service.js';
 import { IDENTITY_LOOKUP, RolesService } from '../services/roles.service.js';
 import { TopicsService } from '../services/topics.service.js';
@@ -60,7 +62,7 @@ export async function createHarness(): Promise<Harness> {
       TypeOrmModule.forRoot({ type: 'better-sqlite3', database: ':memory:', entities: ENTITIES, synchronize: true }),
       TypeOrmModule.forFeature(ENTITIES),
     ],
-    controllers: [PublicController, MeController, TopicsController, PicturesController, EditorsController, PagesController],
+    controllers: [PublicController, MeController, TopicsController, PicturesController, EditorsController, PagesController, SiteController],
     providers: [
       { provide: IMAGE_STORE, useValue: store },
       { provide: IDENTITY_LOOKUP, useValue: fakeIdentity },
@@ -72,6 +74,7 @@ export async function createHarness(): Promise<Harness> {
       PicturesService,
       EditorsService,
       PagesService,
+      SiteService,
     ],
   }).compile();
   const app = moduleRef.createNestApplication();

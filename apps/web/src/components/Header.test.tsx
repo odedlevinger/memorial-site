@@ -1,9 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { DEFAULT_SITE } from '../content';
 import { Header } from './Header';
 
 describe('Header', () => {
   it('toggles the phone menu and closes it when a link is followed', () => {
-    render(<Header topics={[]} role="viewer" />);
+    render(<Header site={DEFAULT_SITE} topics={[]} role="viewer" />);
     const nav = screen.getByRole('navigation', { name: 'Main' });
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
     expect(nav.className).toBe('site-nav open');

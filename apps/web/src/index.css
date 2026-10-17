@@ -50,6 +50,9 @@ body {
   letter-spacing: 0.32em;
   text-transform: uppercase;
   margin-right: -0.32em; /* balance trailing letter-spacing */
+  min-height: 1.2em; /* keep the header steady while the title loads */
+  text-align: center;
+  overflow-wrap: anywhere; /* editors choose the title — never overflow a phone */
 }
 
 .wordmark-sub {

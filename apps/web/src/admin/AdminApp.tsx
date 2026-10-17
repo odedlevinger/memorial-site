@@ -39,7 +39,7 @@ export function AdminApp({ route, role, onContentChanged }: AdminAppProps): Reac
       ) : route.page === 'admin-editors' && role === 'owner' ? (
         <AdminEditors />
       ) : route.page === 'admin-pages' ? (
-        <AdminPages />
+        <AdminPages onChanged={onContentChanged} />
       ) : (
         <AdminTopics onChanged={onContentChanged} />
       )}

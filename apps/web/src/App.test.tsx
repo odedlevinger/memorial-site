@@ -142,6 +142,22 @@ describe('public site', () => {
   });
 });
 
+describe('site title', () => {
+  it('shows the saved title and falls back to the default when it cannot load', async () => {
+    server.site = { title: 'Lavi', tagline: '1940–2025', updatedAt: null };
+    const { unmount } = render(<App />);
+    expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
+    expect(await screen.findByRole('link', { name: 'Lavi' })).toBeTruthy();
+    expect(screen.getByText('1940–2025')).toBeTruthy();
+    unmount();
+
+    for (let i = 0; i < publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/site$/, 503);
+    render(<App />);
+    expect(await screen.findByRole('link', { name: 'Memory' })).toBeTruthy();
+    expect(screen.getByText('a life in photographs')).toBeTruthy();
+  });
+});
+
 describe('about and contact', () => {
   it('renders the saved text with paragraphs, line breaks and links', async () => {
     server.pages['contact'] = {

@@ -1,5 +1,5 @@
 // Test-only in-memory stand-in for /api/content and /api/auth (excluded from coverage).
-import type { ContentStatus, Editor, Page, Picture, Role, Topic, TopicDetail } from '../content';
+import type { ContentStatus, Editor, Page, Picture, Role, SiteInfo, Topic, TopicDetail } from '../content';
 
 interface TopicRow {
   id: string;
@@ -30,6 +30,7 @@ export class FakeServer {
   topics: TopicRow[] = [];
   pictures: PictureRow[] = [];
   editors: Editor[] = [];
+  site: SiteInfo = { title: 'Memory', tagline: 'a life in photographs', updatedAt: null };
   pages: Record<string, Page> = {
     about: { slug: 'about', body: 'About this site.', updatedAt: null },
     contact: { slug: 'contact', body: 'Get in touch.', updatedAt: null },
@@ -82,6 +83,7 @@ export class FakeServer {
       const t = this.publicTopics().find((x) => x.slug === decodeURIComponent(pub[1]!));
       return t ? this.json(this.detail(this.topicRow(t.id)!, true)) : this.json({ message: 'Topic not found' }, 404);
     }
+    if (method === 'GET' && p === '/public/site') return this.json(this.site);
     const page = p.match(/^\/(public\/)?pages\/([^/]+)$/);
     if (page && method === 'GET' && page[1]) {
       const found = this.pages[page[2]!];
@@ -92,6 +94,10 @@ export class FakeServer {
     if (method === 'GET' && p === '/me') return this.json({ email: 'me@example.com', role: this.role });
     if (this.role === 'viewer') return this.json({ message: 'Requires editor access' }, 403);
 
+    if (method === 'PUT' && p === '/site') {
+      this.site = { title: String(body['title']).trim(), tagline: String(body['tagline']).trim(), updatedAt: '2026-10-17T00:00:00Z' };
+      return this.json(this.site);
+    }
     if (page && method === 'PUT' && !page[1]) {
       const saved: Page = { slug: page[2] as Page['slug'], body: String(body['body']), updatedAt: '2026-10-17T00:00:00Z' };
       this.pages[page[2]!] = saved;
