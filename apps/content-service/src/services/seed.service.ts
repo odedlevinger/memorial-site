@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 import { TopicEntity } from '../entities/topic.entity.js';
-import type { Caller } from '../interfaces/content.interfaces.js';
+import type { Caller, LangContext } from '../interfaces/content.interfaces.js';
 import { PicturesService } from './pictures.service.js';
 import { TopicsService } from './topics.service.js';
 
@@ -16,6 +16,8 @@ export type Fetcher = (url: string) => Promise<Response>;
 export const SEED_FETCHER = Symbol('SEED_FETCHER');
 
 const SEED_ACTOR: Caller = { userId: '00000000-0000-0000-0000-000000000000', email: 'seed@system', role: 'owner' };
+/** Placeholders are imported before any language is added, so English is the default. */
+const SEED_LANG: LangContext = { code: 'en', defaultCode: 'en' };
 
 function isEntry(v: unknown): v is ManifestEntry {
   if (typeof v !== 'object' || v === null) return false;
@@ -60,17 +62,17 @@ export class SeedService implements OnApplicationBootstrap {
 
     let imported = 0;
     for (const entry of entries) {
-      const topic = await this.topics.create({ title: entry.title }, SEED_ACTOR);
+      const topic = await this.topics.create({ title: entry.title }, SEED_ACTOR, SEED_LANG);
       const files: Buffer[] = [];
       for (const name of entry.images) {
         const img = await this.fetcher(`${source}/gallery/${name}`);
         if (img.ok) files.push(Buffer.from(await img.arrayBuffer()));
       }
       if (files.length > 0) {
-        await this.pictures.upload(topic.id, files, SEED_ACTOR, { status: 'published' });
+        await this.pictures.upload(topic.id, files, SEED_ACTOR, SEED_LANG, { status: 'published' });
         imported += files.length;
       }
-      await this.topics.update(topic.id, { status: 'published' }, SEED_ACTOR);
+      await this.topics.update(topic.id, { status: 'published' }, SEED_ACTOR, SEED_LANG);
     }
     this.logger.log(`imported ${imported} placeholder pictures in ${entries.length} topics`);
     return imported;

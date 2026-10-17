@@ -4,9 +4,10 @@ import { In, type Repository } from 'typeorm';
 import { PictureEntity } from '../entities/picture.entity.js';
 import { TopicEntity } from '../entities/topic.entity.js';
 import type { CreateTopicDto, UpdateTopicDto } from '../dto/content.dto.js';
-import type { Caller, PictureView, TopicDetailView, TopicView } from '../interfaces/content.interfaces.js';
+import type { Caller, LangContext, PictureView, TopicDetailView, TopicView } from '../interfaces/content.interfaces.js';
 import { AuditService } from './audit.service.js';
 import { ImagesService } from './images.service.js';
+import { requireText, setText, textOf, translationsOf } from './translations.js';
 
 export function slugify(title: string): string {
   const slug = title
@@ -31,40 +32,41 @@ export class TopicsService {
   // ── reads ────────────────────────────────────────────────────────────────
 
   /** Published topics that have at least one published picture (public site). */
-  async listPublished(): Promise<TopicView[]> {
+  async listPublished(lang: LangContext): Promise<TopicView[]> {
     const topics = await this.topics.find({ where: { status: 'published' }, order: { position: 'ASC' } });
     const views: TopicView[] = [];
     for (const t of topics) {
       const pics = await this.picturesOf(t.id, true);
-      if (pics.length > 0) views.push(this.toView(t, pics));
+      if (pics.length > 0) views.push(this.toView(t, pics, lang, false));
     }
     return views;
   }
 
-  async getPublished(slug: string): Promise<TopicDetailView> {
+  async getPublished(slug: string, lang: LangContext): Promise<TopicDetailView> {
     const topic = await this.topics.findOneBy({ slug, status: 'published' });
     const pics = topic ? await this.picturesOf(topic.id, true) : [];
     if (!topic || pics.length === 0) throw new NotFoundException('Topic not found');
-    return { ...this.toView(topic, pics), pictures: pics.map((p) => this.pictureView(p)) };
+    return { ...this.toView(topic, pics, lang, false), pictures: pics.map((p) => this.pictureView(p, lang, false)) };
   }
 
-  /** Everything, drafts included (back office). */
-  async listAll(): Promise<TopicView[]> {
+  /** Everything, drafts included, with every language's text (back office). */
+  async listAll(lang: LangContext): Promise<TopicView[]> {
     const topics = await this.topics.find({ order: { position: 'ASC' } });
     const views: TopicView[] = [];
-    for (const t of topics) views.push(this.toView(t, await this.picturesOf(t.id, false)));
+    for (const t of topics) views.push(this.toView(t, await this.picturesOf(t.id, false), lang, true));
     return views;
   }
 
-  async getAny(id: string): Promise<TopicDetailView> {
+  async getAny(id: string, lang: LangContext): Promise<TopicDetailView> {
     const topic = await this.require(id);
     const pics = await this.picturesOf(id, false);
-    return { ...this.toView(topic, pics), pictures: pics.map((p) => this.pictureView(p)) };
+    return { ...this.toView(topic, pics, lang, true), pictures: pics.map((p) => this.pictureView(p, lang, true)) };
   }
 
   // ── writes ───────────────────────────────────────────────────────────────
 
-  async create(dto: CreateTopicDto, actor: Caller): Promise<TopicDetailView> {
+  /** Creates the topic in the default language (`lang` only picks the language of the reply). */
+  async create(dto: CreateTopicDto, actor: Caller, lang: LangContext): Promise<TopicDetailView> {
     const last = await this.topics.find({ order: { position: 'DESC' }, take: 1 });
     const topic = await this.topics.save(
       this.topics.create({
@@ -77,11 +79,13 @@ export class TopicsService {
       }),
     );
     await this.audit.record(actor, 'topic.create', topic.id, { title: topic.title });
-    return this.getAny(topic.id);
+    return this.getAny(topic.id, lang);
   }
 
-  async update(id: string, dto: UpdateTopicDto, actor: Caller): Promise<TopicDetailView> {
+  /** Title and description are written in `lang`; the other fields are shared by all languages. */
+  async update(id: string, dto: UpdateTopicDto, actor: Caller, lang: LangContext): Promise<TopicDetailView> {
     const topic = await this.require(id);
+    if (dto.title !== undefined) requireText(dto.title, 'title', lang);
     if (dto.slug !== undefined && dto.slug !== topic.slug) {
       if (await this.topics.findOneBy({ slug: dto.slug })) throw new ConflictException('Slug already in use');
       topic.slug = dto.slug;
@@ -90,13 +94,13 @@ export class TopicsService {
       const pic = await this.pictures.findOneBy({ id: dto.coverPictureId, topicId: id });
       if (!pic) throw new BadRequestException('Cover must be one of this topic’s pictures');
     }
-    if (dto.title !== undefined) topic.title = dto.title.trim();
-    if (dto.description !== undefined) topic.description = dto.description;
+    if (dto.title !== undefined) setText(topic, 'title', dto.title.trim(), lang);
+    if (dto.description !== undefined) setText(topic, 'description', dto.description, lang);
     if (dto.status !== undefined) topic.status = dto.status;
     if (dto.coverPictureId !== undefined) topic.coverPictureId = dto.coverPictureId;
     await this.topics.save(topic);
-    await this.audit.record(actor, 'topic.update', id, { ...dto });
-    return this.getAny(id);
+    await this.audit.record(actor, 'topic.update', id, { ...dto, lang: lang.code });
+    return this.getAny(id, lang);
   }
 
   async remove(id: string, actor: Caller): Promise<void> {
@@ -108,7 +112,7 @@ export class TopicsService {
     await this.audit.record(actor, 'topic.delete', id, { title: topic.title, pictures: pics.length });
   }
 
-  async reorder(ids: readonly string[], actor: Caller): Promise<TopicView[]> {
+  async reorder(ids: readonly string[], actor: Caller, lang: LangContext): Promise<TopicView[]> {
     const all = await this.topics.find();
     if (ids.length !== all.length || new Set(ids).size !== ids.length || !all.every((t) => ids.includes(t.id))) {
       throw new BadRequestException('ids must list every topic exactly once');
@@ -117,7 +121,7 @@ export class TopicsService {
       for (const [i, id] of ids.entries()) await m.update(TopicEntity, { id }, { position: i });
     });
     await this.audit.record(actor, 'topic.reorder', null, { ids: [...ids] });
-    return this.listAll();
+    return this.listAll(lang);
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────
@@ -135,34 +139,37 @@ export class TopicsService {
     });
   }
 
-  pictureView(p: PictureEntity): PictureView {
+  /** `admin` adds every language's text, for the back office. */
+  pictureView(p: PictureEntity, lang: LangContext, admin: boolean): PictureView {
     return {
       id: p.id,
       topicId: p.topicId,
-      caption: p.caption,
-      dateText: p.dateText,
-      place: p.place,
-      story: p.story,
+      caption: textOf(p, 'caption', lang),
+      dateText: textOf(p, 'dateText', lang),
+      place: textOf(p, 'place', lang),
+      story: textOf(p, 'story', lang),
       position: p.position,
       status: p.status,
       width: p.width,
       height: p.height,
       images: this.images.urls(p.storageKey),
+      ...(admin ? { translations: translationsOf(p) } : {}),
     };
   }
 
-  private toView(t: TopicEntity, pics: readonly PictureEntity[]): TopicView {
+  private toView(t: TopicEntity, pics: readonly PictureEntity[], lang: LangContext, admin: boolean): TopicView {
     const cover = pics.find((p) => p.id === t.coverPictureId) ?? pics[0];
     return {
       id: t.id,
       slug: t.slug,
-      title: t.title,
-      description: t.description,
+      title: textOf(t, 'title', lang),
+      description: textOf(t, 'description', lang),
       position: t.position,
       status: t.status,
       coverPictureId: t.coverPictureId,
       cover: cover ? this.images.urls(cover.storageKey) : null,
       pictureCount: pics.length,
+      ...(admin ? { translations: translationsOf(t) } : {}),
     };
   }
 

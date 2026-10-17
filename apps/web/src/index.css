@@ -49,7 +49,7 @@ body {
   font-size: 2.75rem;
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  margin-right: -0.32em; /* balance trailing letter-spacing */
+  margin-inline-end: -0.32em; /* balance trailing letter-spacing */
   min-height: 1.2em; /* keep the header steady while the title loads */
   text-align: center;
   overflow-wrap: anywhere; /* editors choose the title — never overflow a phone */
@@ -295,7 +295,7 @@ body {
 
 .lb-close {
   top: 1rem;
-  right: 1.25rem;
+  inset-inline-end: 1.25rem;
   font-size: 1.5rem;
 }
 
@@ -307,11 +307,49 @@ body {
 }
 
 .lb-prev {
-  left: 0.5rem;
+  inset-inline-start: 0.5rem;
 }
 
 .lb-next {
-  right: 0.5rem;
+  inset-inline-end: 0.5rem;
+}
+
+/* Hebrew, Arabic etc. have no capitals and don't take wide letter-spacing. */
+[dir='rtl'] .wordmark-name {
+  letter-spacing: 0.04em;
+  margin-inline-end: -0.04em;
+}
+
+[dir='rtl'] .site-nav {
+  letter-spacing: 0;
+  font-size: 0.95rem;
+}
+
+/* ── Language switcher ──────────────────────────────────────────────────── */
+.lang-switch {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.lang-switch button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.lang-switch button[dir='rtl'] {
+  letter-spacing: 0;
+}
+
+.lang-switch button[aria-pressed='true'] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
 }
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */
@@ -678,4 +716,40 @@ button.status {
     width: 5.5rem;
     height: 4.1rem;
   }
+}
+
+/* ── Back office: languages ─────────────────────────────────────────────── */
+.admin-lang {
+  margin: 0 0 1.5rem;
+}
+
+.admin-lang label {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  font-weight: 600;
+}
+
+.lang-row {
+  margin-bottom: 0;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.lang-row input {
+  flex: 1 1 8rem;
+  min-width: 8rem;
+  width: auto;
+}
+
+.lang-row select {
+  width: auto;
+}
+
+.lang-row code {
+  min-width: 2.5rem;
+}
+
+.admin-lang select {
+  width: auto;
 }

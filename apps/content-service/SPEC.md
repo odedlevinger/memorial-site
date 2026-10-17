@@ -50,6 +50,22 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 - Title (required, ≤ 60 chars) and tagline (optional, ≤ 120 chars) — shown in the header,
   footer and browser tab. Defaults: "Memory" / "a life in photographs".
 
+**Language**
+- Code (lower-case language tag, e.g. `en`, `he`, `pt-br`), name as shown in the language
+  switcher (≤ 40 chars, e.g. "עברית"), text direction (`ltr` or `rtl`).
+- Exactly one language is the **default**: visitors see it until they pick another, and any
+  text not yet translated falls back to it. Until an editor adds a language the site is
+  English only (left to right).
+- Label overrides (≤ 300 labels, ≤ 500 chars each) for the public site's fixed menu items,
+  buttons and messages; labels left empty use the built-in text (English and Hebrew ship
+  built in) or else the default language's.
+- Translatable, per language: topic title and description; picture caption, date, place and
+  story; About / Contact text; site title and tagline. Slugs, status, order, covers and
+  images are shared by all languages. In a non-default language, empty text means "use the
+  default language's text"; required fields are required only in the default language.
+- Removing a language keeps its translations (adding it back restores them). The default
+  language cannot be removed. Changing the default keeps every language's text.
+
 ## 3. Back office capabilities (Editor and Owner)
 
 1. List all topics (drafts included) in their current order; create, edit, delete a topic.
@@ -63,6 +79,9 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 8. Owner only: view, add and remove Editors (by email).
 9. Edit the text of the About and Contact pages.
 10. Edit the site title and tagline.
+11. Add, rename and remove languages, set each one's text direction and labels, and choose
+    the default language.
+12. Edit every translatable field (§2) in any of the site's languages.
 
 ## 4. Public site behaviour
 
@@ -71,6 +90,8 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 - A published topic with no published pictures is not shown.
 - The viewer shows caption, date, place and story when present.
 - The About and Contact pages show their current text.
+- Reads take `?lang=<code>`; text comes back in that language, falling back to the default
+  language field by field. An unknown code reads as the default language.
 - Changes are visible on the public site within 1 minute of saving.
 
 ## 5. Placeholders
@@ -97,7 +118,7 @@ replaced or deleted like anything else. Import runs once.
 - Comments, likes, or visitor submissions.
 - Video.
 - Version history / undo beyond the audit log.
-- Multiple languages.
+- Language-specific slugs / URLs, and automatic (machine) translation.
 
 ## 8. Open questions (defaults assumed unless changed)
 

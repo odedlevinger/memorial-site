@@ -61,9 +61,15 @@ describe('contentApi', () => {
     vi.stubGlobal('fetch', fetchMock);
     await contentApi.publicTopic('a b');
     await contentApi.removeEditor('a+b@c.d');
+    await contentApi.publicTopic('a', 'pt-br');
+    await contentApi.updateLanguage('pt-br', { name: 'Português' });
+    await contentApi.removeLanguage('pt-br');
     expect(fetchMock.mock.calls.map((c) => (c as unknown as [string])[0])).toEqual([
       '/api/content/public/topics/a%20b',
       '/api/content/editors/a%2Bb%40c.d',
+      '/api/content/public/topics/a?lang=pt-br',
+      '/api/content/languages/pt-br',
+      '/api/content/languages/pt-br',
     ]);
   });
 });

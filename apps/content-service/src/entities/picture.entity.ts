@@ -7,7 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import type { ContentStatus } from '../interfaces/content.interfaces.js';
+import type { ContentStatus, Translations } from '../interfaces/content.interfaces.js';
 import { TopicEntity } from './topic.entity.js';
 
 @Entity('pictures')
@@ -43,6 +43,10 @@ export class PictureEntity {
 
   @Column({ type: 'text', nullable: true })
   story!: string | null;
+
+  /** Other languages' text (and the default's), see Translations. null = none yet. */
+  @Column({ type: 'simple-json', nullable: true })
+  translations!: Translations | null;
 
   @Column({ type: 'int', default: 0 })
   position!: number;

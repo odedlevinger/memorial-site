@@ -4,6 +4,21 @@
 export type ContentStatus = 'draft' | 'published';
 export type Role = 'owner' | 'editor' | 'viewer';
 
+/** Back office only: language code → field → text (see content-service's Translations). */
+export type Translations = Readonly<Record<string, Readonly<Record<string, string>>>>;
+
+export type Direction = 'ltr' | 'rtl';
+
+/** A language the site is offered in. Exactly one is the default. */
+export interface Language {
+  readonly code: string;
+  readonly name: string;
+  readonly direction: Direction;
+  readonly isDefault: boolean;
+  /** Editor overrides for the fixed labels (see i18n.tsx), by label key. */
+  readonly labels: Readonly<Record<string, string>>;
+}
+
 export interface PictureImages {
   readonly display: string;
   readonly thumb: string;
@@ -21,6 +36,7 @@ export interface Picture {
   readonly width: number;
   readonly height: number;
   readonly images: PictureImages;
+  readonly translations?: Translations;
 }
 
 export interface Topic {
@@ -33,6 +49,7 @@ export interface Topic {
   readonly coverPictureId: string | null;
   readonly cover: PictureImages | null;
   readonly pictureCount: number;
+  readonly translations?: Translations;
 }
 
 export interface TopicDetail extends Topic {
@@ -47,6 +64,7 @@ export interface Page {
   readonly body: string;
   /** null while the page still shows its built-in default text. */
   readonly updatedAt: string | null;
+  readonly translations?: Translations;
 }
 
 /** The site's name and tagline, shown in the header. */
@@ -55,6 +73,7 @@ export interface SiteInfo {
   /** May be empty — the header then shows the title alone. */
   readonly tagline: string;
   readonly updatedAt: string | null;
+  readonly translations?: Translations;
 }
 
 /** Used if the site settings cannot be loaded (matches content-service's defaults). */
@@ -68,6 +87,7 @@ export interface Editor {
 
 export type TopicPatch = Partial<Pick<Topic, 'title' | 'slug' | 'description' | 'status' | 'coverPictureId'>>;
 export type PicturePatch = Partial<Pick<Picture, 'caption' | 'dateText' | 'place' | 'story' | 'status' | 'topicId'>>;
+export type LanguagePatch = Partial<Pick<Language, 'name' | 'direction' | 'labels'>> & { readonly isDefault?: true };
 
 export class ApiError extends Error {
   constructor(
@@ -115,6 +135,8 @@ async function publicCall<T>(path: string): Promise<T> {
 }
 
 const json = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) });
+/** Appends `?lang=` — text is read / written in that language (default language when omitted). */
+const inLang = (path: string, lang?: string): string => (lang ? `${path}?lang=${encodeURIComponent(lang)}` : path);
 const file = (field: string, f: File): FormData => {
   const form = new FormData();
   form.append(field, f);
@@ -122,10 +144,11 @@ const file = (field: string, f: File): FormData => {
 };
 
 export const contentApi = {
-  publicTopics: (): Promise<Topic[]> => publicCall('/public/topics'),
-  publicTopic: (slug: string): Promise<TopicDetail> => publicCall(`/public/topics/${encodeURIComponent(slug)}`),
-  publicPage: (slug: PageSlug): Promise<Page> => publicCall(`/public/pages/${slug}`),
-  publicSite: (): Promise<SiteInfo> => publicCall('/public/site'),
+  publicTopics: (lang?: string): Promise<Topic[]> => publicCall(inLang('/public/topics', lang)),
+  publicTopic: (slug: string, lang?: string): Promise<TopicDetail> => publicCall(inLang(`/public/topics/${encodeURIComponent(slug)}`, lang)),
+  publicPage: (slug: PageSlug, lang?: string): Promise<Page> => publicCall(inLang(`/public/pages/${slug}`, lang)),
+  publicSite: (lang?: string): Promise<SiteInfo> => publicCall(inLang('/public/site', lang)),
+  publicLanguages: (): Promise<Language[]> => publicCall('/public/languages'),
 
   /** The caller's back-office role; 'viewer' when signed out. */
   me: async (): Promise<Role> => {
@@ -139,21 +162,29 @@ export const contentApi = {
   topics: (): Promise<Topic[]> => call('/topics'),
   topic: (id: string): Promise<TopicDetail> => call(`/topics/${id}`),
   createTopic: (title: string): Promise<TopicDetail> => call('/topics', json('POST', { title })),
-  updateTopic: (id: string, patch: TopicPatch): Promise<TopicDetail> => call(`/topics/${id}`, json('PATCH', patch)),
+  updateTopic: (id: string, patch: TopicPatch, lang?: string): Promise<TopicDetail> => call(inLang(`/topics/${id}`, lang), json('PATCH', patch)),
   deleteTopic: (id: string): Promise<void> => call(`/topics/${id}`, { method: 'DELETE' }),
   reorderTopics: (ids: readonly string[]): Promise<Topic[]> => call('/topics/order', json('PUT', { ids })),
 
   /** One file per request keeps each upload well under Cloud Run's 32 MB request cap. */
   uploadPicture: (topicId: string, f: File): Promise<Picture[]> =>
     call(`/topics/${topicId}/pictures`, { method: 'POST', body: file('files', f) }),
-  updatePicture: (id: string, patch: PicturePatch): Promise<Picture> => call(`/pictures/${id}`, json('PATCH', patch)),
+  updatePicture: (id: string, patch: PicturePatch, lang?: string): Promise<Picture> => call(inLang(`/pictures/${id}`, lang), json('PATCH', patch)),
   replacePictureImage: (id: string, f: File): Promise<Picture> => call(`/pictures/${id}/image`, { method: 'PUT', body: file('file', f) }),
   deletePicture: (id: string): Promise<void> => call(`/pictures/${id}`, { method: 'DELETE' }),
   reorderPictures: (topicId: string, ids: readonly string[]): Promise<Picture[]> =>
     call(`/topics/${topicId}/pictures/order`, json('PUT', { ids })),
 
-  updatePage: (slug: PageSlug, body: string): Promise<Page> => call(`/pages/${slug}`, json('PUT', { body })),
-  updateSite: (title: string, tagline: string): Promise<SiteInfo> => call('/site', json('PUT', { title, tagline })),
+  /** Back-office reads: default-language text plus every language's translations. */
+  page: (slug: PageSlug): Promise<Page> => call(`/pages/${slug}`),
+  site: (): Promise<SiteInfo> => call('/site'),
+  updatePage: (slug: PageSlug, body: string, lang?: string): Promise<Page> => call(inLang(`/pages/${slug}`, lang), json('PUT', { body })),
+  updateSite: (title: string, tagline: string, lang?: string): Promise<SiteInfo> => call(inLang('/site', lang), json('PUT', { title, tagline })),
+
+  addLanguage: (language: Pick<Language, 'code' | 'name' | 'direction'>): Promise<Language[]> => call('/languages', json('POST', language)),
+  updateLanguage: (code: string, patch: LanguagePatch): Promise<Language[]> =>
+    call(`/languages/${encodeURIComponent(code)}`, json('PATCH', patch)),
+  removeLanguage: (code: string): Promise<Language[]> => call(`/languages/${encodeURIComponent(code)}`, { method: 'DELETE' }),
 
   editors: (): Promise<Editor[]> => call('/editors'),
   addEditor: (email: string): Promise<Editor[]> => call('/editors', json('POST', { email })),

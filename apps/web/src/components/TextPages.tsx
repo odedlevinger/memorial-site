@@ -1,20 +1,24 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { contentApi, type Page, type PageSlug } from '../content';
+import { useI18n } from '../i18n';
 
 export function About(): ReactElement {
-  return <SitePage slug="about" title="About" />;
+  const { t } = useI18n();
+  return <SitePage slug="about" title={t('nav.about')} />;
 }
 
 export function Contact(): ReactElement {
-  return <SitePage slug="contact" title="Contact" />;
+  const { t } = useI18n();
+  return <SitePage slug="contact" title={t('nav.contact')} />;
 }
 
 export function NotFound(): ReactElement {
+  const { t } = useI18n();
   return (
     <article className="prose-page">
-      <h1 className="page-title">Page not found</h1>
-      <p><a href="#/">Return to the galleries</a></p>
+      <h1 className="page-title">{t('notFound.title')}</h1>
+      <p><a href="#/">{t('notFound.back')}</a></p>
     </article>
   );
 }
@@ -22,26 +26,28 @@ export function NotFound(): ReactElement {
 /** About / Contact: text editors manage in the back office (Pages). */
 function SitePage({ slug, title }: { readonly slug: PageSlug; readonly title: string }): ReactElement {
   const [page, setPage] = useState<Page | null | 'failed'>(null);
+  const { current, t } = useI18n();
+  const lang = current.code;
 
   useEffect(() => {
     let active = true;
     setPage(null);
-    contentApi.publicPage(slug).then(
+    contentApi.publicPage(slug, lang).then(
       (p) => active && setPage(p),
       () => active && setPage('failed'),
     );
     return (): void => {
       active = false;
     };
-  }, [slug]);
+  }, [slug, lang]);
 
   return (
     <article className="prose-page">
       <h1 className="page-title">{title}</h1>
       {page === null ? (
-        <p className="empty">Loading…</p>
+        <p className="empty">{t('site.loading')}</p>
       ) : page === 'failed' ? (
-        <p className="empty">Couldn’t load this page. Please try again later.</p>
+        <p className="empty">{t('page.loadFailed')}</p>
       ) : (
         <PageText body={page.body} />
       )}

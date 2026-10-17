@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactElement } from 'react';
-import { contentApi, type ContentStatus, type Picture, type TopicDetail } from '../content';
+import { contentApi, type ContentStatus, type Language, type Picture, type TopicDetail } from '../content';
 import { hrefFor } from '../route';
 import { PictureEditor } from './PictureEditor';
 import { Reorderable } from './Reorderable';
+import { inputLang, textIn } from './translation';
 import { errorText, useAsync } from './useAsync';
 
 interface AdminTopicProps {
   readonly id: string;
+  /** Title, description and picture captions are edited in this language. */
+  readonly lang: Language;
   readonly onChanged: () => void;
 }
 
@@ -18,9 +21,14 @@ interface Fields {
   status: ContentStatus;
 }
 
-const fieldsOf = (t: TopicDetail): Fields => ({ title: t.title, slug: t.slug, description: t.description ?? '', status: t.status });
+const fieldsOf = (t: TopicDetail, lang: Language): Fields => ({
+  title: textIn(t, 'title', t.title, lang),
+  slug: t.slug,
+  description: textIn(t, 'description', t.description, lang),
+  status: t.status,
+});
 
-export function AdminTopic({ id, onChanged }: AdminTopicProps): ReactElement {
+export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactElement {
   const topic = useAsync(() => contentApi.topic(id), id);
   const allTopics = useAsync(contentApi.topics, `all-${id}`);
   const [fields, setFields] = useState<Fields | null>(null);
@@ -30,8 +38,8 @@ export function AdminTopic({ id, onChanged }: AdminTopicProps): ReactElement {
   const [upload, setUpload] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
-    if (topic.data) setFields(fieldsOf(topic.data));
-  }, [topic.data]);
+    if (topic.data) setFields(fieldsOf(topic.data, lang));
+  }, [topic.data, lang]);
 
   const run = async (action: () => Promise<unknown>, done?: string): Promise<boolean> => {
     setError(null);
@@ -57,7 +65,12 @@ export function AdminTopic({ id, onChanged }: AdminTopicProps): ReactElement {
   const save = (e: FormEvent): void => {
     e.preventDefault();
     void run(
-      () => contentApi.updateTopic(id, { title: fields.title, slug: fields.slug, description: fields.description || null, status: fields.status }),
+      () =>
+        contentApi.updateTopic(
+          id,
+          { title: fields.title, slug: fields.slug, description: fields.description || null, status: fields.status },
+          lang.code,
+        ),
       'Saved',
     );
   };
@@ -88,9 +101,9 @@ export function AdminTopic({ id, onChanged }: AdminTopicProps): ReactElement {
     <div>
       <p className="crumbs"><a href={hrefFor({ page: 'admin' })}>Topics</a> / {t.title}</p>
       <form className="admin-form" onSubmit={save}>
-        <label>Title<input value={fields.title} maxLength={120} required onChange={(e): void => set('title', e.target.value)} /></label>
+        <label>Title<input value={fields.title} maxLength={120} required={lang.isDefault} placeholder={lang.isDefault ? undefined : t.title} {...inputLang(lang)} onChange={(e): void => set('title', e.target.value)} /></label>
         <label>Web address<input value={fields.slug} maxLength={140} required pattern="[a-z0-9]+(-[a-z0-9]+)*" onChange={(e): void => set('slug', e.target.value)} /></label>
-        <label>Description<textarea value={fields.description} maxLength={2000} rows={3} onChange={(e): void => set('description', e.target.value)} /></label>
+        <label>Description<textarea value={fields.description} maxLength={2000} rows={3} placeholder={lang.isDefault ? undefined : (t.description ?? undefined)} {...inputLang(lang)} onChange={(e): void => set('description', e.target.value)} /></label>
         <label>Status
           <select value={fields.status} onChange={(e): void => set('status', e.target.value as ContentStatus)}>
             <option value="draft">Draft (hidden)</option>
@@ -146,6 +159,7 @@ export function AdminTopic({ id, onChanged }: AdminTopicProps): ReactElement {
       {editing && (
         <PictureEditor
           picture={editing}
+          lang={lang}
           topics={allTopics.data ?? []}
           onClose={(): void => setEditing(null)}
           onSaved={(msg): void => {
