@@ -38,8 +38,6 @@ resource "google_sql_database_instance" "my_db" {
     ip_configuration {
       ipv4_enabled    = true # keep public IP — Cloud SQL Auth Proxy in CI still uses it
       private_network = google_compute_network.main_vpc.id
-      # enabled_private_path_for_google_cloud_services allows Cloud Run (via VPC connector)
-      # to reach Cloud SQL on its private IP without going through the public interface.
     }
   }
 

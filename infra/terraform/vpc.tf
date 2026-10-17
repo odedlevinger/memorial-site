@@ -1,10 +1,11 @@
 # ── VPC Network ───────────────────────────────────────────────────────────────
 # Custom VPC isolating all backend services from the public internet.
-# Each service connects via the Serverless VPC Access Connector (memorial-site-connector).
+# Cloud Run services reach Cloud SQL through the built-in Cloud SQL connection
+# (--add-cloudsql-instances), so no Serverless VPC Access Connector is needed.
+# If a service ever needs private VPC access, use Direct VPC egress (no always-on VMs).
 #
 # Network topology:
 #   subnet 10.10.0.0/24  — Cloud Run services (private_ip_google_access = true)
-#   subnet 10.11.0.0/28  — VPC Access Connector (managed by google_vpc_access_connector)
 #   Cloud NAT             — egress-only internet access for services without public IPs
 #   Private Service Connection — Cloud SQL reachable at a private RFC-1918 address
 
@@ -43,20 +44,6 @@ resource "google_compute_router_nat" "cloud_nat" {
     enable = true
     filter = "ERRORS_ONLY"
   }
-}
-
-# ── Serverless VPC Access Connector ───────────────────────────────────────────
-# Required for Cloud Run services to reach VPC resources (Cloud SQL private IP,
-# other internal services). One shared connector per VPC.
-
-resource "google_vpc_access_connector" "connector" {
-  name          = "memorial-site-connector"
-  region        = var.region
-  ip_cidr_range = "10.11.0.0/28" # must not overlap any existing subnet
-  network       = google_compute_network.main_vpc.name
-
-  min_instances = 2
-  max_instances = 3
 }
 
 # ── Private Service Connection for Cloud SQL ──────────────────────────────────
