@@ -325,6 +325,17 @@ body {
   font-size: 0.95rem;
 }
 
+/* The same for the other spaced-out labels; :dir() leaves the left-to-right back office alone. */
+.menu-toggle:dir(rtl),
+.nav-sub li a:dir(rtl),
+.page-title:dir(rtl),
+.crumbs:dir(rtl),
+.tile-title:dir(rtl),
+.lb-meta:dir(rtl),
+.lb-count:dir(rtl) {
+  letter-spacing: 0;
+}
+
 /* ── Language switcher ──────────────────────────────────────────────────── */
 .lang-switch {
   display: flex;
