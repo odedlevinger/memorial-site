@@ -4,10 +4,11 @@ import type { Repository } from 'typeorm';
 import { PictureEntity } from '../entities/picture.entity.js';
 import { TopicEntity } from '../entities/topic.entity.js';
 import type { UpdatePictureDto } from '../dto/content.dto.js';
-import type { Caller, ContentStatus, PictureView } from '../interfaces/content.interfaces.js';
+import type { Caller, ContentStatus, LangContext, PictureView } from '../interfaces/content.interfaces.js';
 import { AuditService } from './audit.service.js';
 import { ImagesService } from './images.service.js';
 import { TopicsService } from './topics.service.js';
+import { setText } from './translations.js';
 
 export interface UploadOptions {
   readonly status?: ContentStatus;
@@ -25,7 +26,7 @@ export class PicturesService {
   ) {}
 
   /** Adds uploaded files to the end of a topic; new pictures start as drafts. */
-  async upload(topicId: string, files: readonly Buffer[], actor: Caller, opts: UploadOptions = {}): Promise<PictureView[]> {
+  async upload(topicId: string, files: readonly Buffer[], actor: Caller, lang: LangContext, opts: UploadOptions = {}): Promise<PictureView[]> {
     await this.topics.require(topicId);
     if (files.length === 0) throw new BadRequestException('No files uploaded');
     let position = (await this.topics.picturesOf(topicId, false)).length;
@@ -46,13 +47,13 @@ export class PicturesService {
           status: opts.status ?? 'draft',
         }),
       );
-      created.push(this.topics.pictureView(pic));
+      created.push(this.topics.pictureView(pic, lang, true));
     }
     await this.audit.record(actor, 'picture.upload', topicId, { count: created.length });
     return created;
   }
 
-  async replaceImage(id: string, file: Buffer, actor: Caller): Promise<PictureView> {
+  async replaceImage(id: string, file: Buffer, actor: Caller, lang: LangContext): Promise<PictureView> {
     const pic = await this.require(id);
     const img = await this.images.store(file);
     const oldKey = pic.storageKey;
@@ -60,10 +61,11 @@ export class PicturesService {
     await this.pictures.save(pic);
     await this.images.remove(oldKey);
     await this.audit.record(actor, 'picture.replace-image', id, null);
-    return this.topics.pictureView(pic);
+    return this.topics.pictureView(pic, lang, true);
   }
 
-  async update(id: string, dto: UpdatePictureDto, actor: Caller): Promise<PictureView> {
+  /** Caption, date, place and story are written in `lang`; status and topic are shared. */
+  async update(id: string, dto: UpdatePictureDto, actor: Caller, lang: LangContext): Promise<PictureView> {
     const pic = await this.require(id);
     if (dto.topicId !== undefined && dto.topicId !== pic.topicId) {
       await this.topics.require(dto.topicId);
@@ -71,14 +73,14 @@ export class PicturesService {
       pic.position = (await this.topics.picturesOf(dto.topicId, false)).length;
       pic.topicId = dto.topicId;
     }
-    if (dto.caption !== undefined) pic.caption = dto.caption;
-    if (dto.dateText !== undefined) pic.dateText = dto.dateText;
-    if (dto.place !== undefined) pic.place = dto.place;
-    if (dto.story !== undefined) pic.story = dto.story;
+    if (dto.caption !== undefined) setText(pic, 'caption', dto.caption, lang);
+    if (dto.dateText !== undefined) setText(pic, 'dateText', dto.dateText, lang);
+    if (dto.place !== undefined) setText(pic, 'place', dto.place, lang);
+    if (dto.story !== undefined) setText(pic, 'story', dto.story, lang);
     if (dto.status !== undefined) pic.status = dto.status;
     await this.pictures.save(pic);
-    await this.audit.record(actor, 'picture.update', id, { ...dto });
-    return this.topics.pictureView(pic);
+    await this.audit.record(actor, 'picture.update', id, { ...dto, lang: lang.code });
+    return this.topics.pictureView(pic, lang, true);
   }
 
   async remove(id: string, actor: Caller): Promise<void> {
@@ -89,7 +91,7 @@ export class PicturesService {
     await this.audit.record(actor, 'picture.delete', id, { topicId: pic.topicId });
   }
 
-  async reorder(topicId: string, ids: readonly string[], actor: Caller): Promise<PictureView[]> {
+  async reorder(topicId: string, ids: readonly string[], actor: Caller, lang: LangContext): Promise<PictureView[]> {
     const all = await this.topics.picturesOf(topicId, false);
     const found = await this.topics.picturesByIds(topicId, ids);
     if (ids.length !== all.length || new Set(ids).size !== ids.length || found.length !== all.length) {
@@ -99,7 +101,7 @@ export class PicturesService {
       for (const [i, id] of ids.entries()) await m.update(PictureEntity, { id }, { position: i });
     });
     await this.audit.record(actor, 'picture.reorder', topicId, { ids: [...ids] });
-    return (await this.topics.picturesOf(topicId, false)).map((p) => this.topics.pictureView(p));
+    return (await this.topics.picturesOf(topicId, false)).map((p) => this.topics.pictureView(p, lang, true));
   }
 
   private async require(id: string): Promise<PictureEntity> {

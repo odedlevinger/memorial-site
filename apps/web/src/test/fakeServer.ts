@@ -1,5 +1,11 @@
 // Test-only in-memory stand-in for /api/content and /api/auth (excluded from coverage).
-import type { ContentStatus, Editor, Page, Picture, Role, SiteInfo, Topic, TopicDetail } from '../content';
+import type { ContentStatus, Editor, Language, Page, Picture, Role, SiteInfo, Topic, TopicDetail } from '../content';
+
+type Tr = Record<string, Record<string, string>>;
+interface Lang {
+  code: string;
+  isDefault: boolean;
+}
 
 interface TopicRow {
   id: string;
@@ -8,6 +14,7 @@ interface TopicRow {
   description: string | null;
   status: ContentStatus;
   coverPictureId: string | null;
+  translations: Tr;
 }
 
 interface PictureRow {
@@ -19,6 +26,7 @@ interface PictureRow {
   story: string | null;
   status: ContentStatus;
   version: number;
+  translations: Tr;
 }
 
 let seq = 0;
@@ -30,28 +38,45 @@ export class FakeServer {
   topics: TopicRow[] = [];
   pictures: PictureRow[] = [];
   editors: Editor[] = [];
-  site: SiteInfo = { title: 'Memory', tagline: 'a life in photographs', updatedAt: null };
-  pages: Record<string, Page> = {
-    about: { slug: 'about', body: 'About this site.', updatedAt: null },
-    contact: { slug: 'contact', body: 'Get in touch.', updatedAt: null },
+  site: SiteInfo & { translations: Tr } = { title: 'Memory', tagline: 'a life in photographs', updatedAt: null, translations: {} };
+  pages: Record<string, Page & { translations: Tr }> = {
+    about: { slug: 'about', body: 'About this site.', updatedAt: null, translations: {} },
+    contact: { slug: 'contact', body: 'Get in touch.', updatedAt: null, translations: {} },
   };
+  languages: Language[] = [{ code: 'en', name: 'English', direction: 'ltr', isDefault: true, labels: {} }];
+  /** "METHOD path" of every request (no query string). */
   readonly calls: string[] = [];
+  /** "METHOD path?query" of every request. */
+  readonly urls: string[] = [];
   private failures: Array<{ match: RegExp; status: number; body: unknown }> = [];
+  private holds: Array<{ match: RegExp; gate: Promise<void> }> = [];
+
+  /** Make the next request whose "METHOD path" matches wait until the returned function is called. */
+  hold(match: RegExp): () => void {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    this.holds.push({ match, gate });
+    return release;
+  }
 
   /** Make the next request whose "METHOD path" matches fail with `status`. */
   failNext(match: RegExp, status = 500, body: unknown = { message: 'Server error' }): void {
     this.failures.push({ match, status, body });
   }
 
+  addLanguage(code: string, name: string, direction: Language['direction'] = 'ltr', labels: Record<string, string> = {}): void {
+    this.languages.push({ code, name, direction, isDefault: false, labels });
+  }
+
   addTopic(title: string, status: ContentStatus = 'published', pictureCount = 2): TopicRow {
-    const t: TopicRow = { id: uid(), slug: title.toLowerCase().replace(/\s+/g, '-'), title, description: null, status, coverPictureId: null };
+    const t: TopicRow = { id: uid(), slug: title.toLowerCase().replace(/\s+/g, '-'), title, description: null, status, coverPictureId: null, translations: {} };
     this.topics.push(t);
     for (let i = 0; i < pictureCount; i++) this.addPicture(t.id, status);
     return t;
   }
 
   addPicture(topicId: string, status: ContentStatus = 'published', caption: string | null = null): PictureRow {
-    const p: PictureRow = { id: uid(), topicId, caption, dateText: null, place: null, story: null, status, version: 1 };
+    const p: PictureRow = { id: uid(), topicId, caption, dateText: null, place: null, story: null, status, version: 1, translations: {} };
     this.pictures.push(p);
     return p;
   }
@@ -61,14 +86,44 @@ export class FakeServer {
     const method = (init.method ?? 'GET').toUpperCase();
     const key = `${method} ${url.pathname}`;
     this.calls.push(key);
+    this.urls.push(`${method} ${url.pathname}${url.search}`);
+    const held = this.holds.findIndex((h) => h.match.test(key));
+    if (held >= 0) await this.holds.splice(held, 1)[0]!.gate;
     const failure = this.failures.findIndex((f) => f.match.test(key));
     if (failure >= 0) {
       const [f] = this.failures.splice(failure, 1);
       return this.json(f!.body, f!.status);
     }
     const body = typeof init.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : {};
+    const code = url.searchParams.get('lang');
+    const known = this.languages.find((l) => l.code === code);
+    if (code && !known && method !== 'GET') return this.json({ message: `Unknown language "${code}"` }, 400);
+    this.lang = known ?? this.defaultLanguage();
     return this.route(method, url.pathname, body);
   };
+
+  /** The request's language (unknown / missing = the default), set per request. */
+  private lang: Lang = { code: 'en', isDefault: true };
+
+  private defaultLanguage(): Language {
+    return this.languages.find((l) => l.isDefault)!;
+  }
+
+  /** Same fallback as content-service: requested language → default language → column. */
+  private text<T extends string | null>(row: { translations: Tr }, field: string, base: T): T {
+    const d = this.defaultLanguage().code;
+    return (row.translations[this.lang.code]?.[field] || row.translations[d]?.[field] || base) as T;
+  }
+
+  /** Same write rule as content-service's setText; returns the new column value. */
+  private write<T extends string | null>(row: { translations: Tr }, field: string, value: T, base: T): T {
+    const own = { ...(row.translations[this.lang.code] ?? {}) };
+    if (this.lang.isDefault) own[field] = value ?? '';
+    else if (value) own[field] = value;
+    else delete own[field];
+    row.translations = { ...row.translations, [this.lang.code]: own };
+    return this.lang.isDefault ? value : base;
+  }
 
   private route(method: string, path: string, body: Record<string, unknown>): Response {
     const auth = path.match(/^\/api\/auth\/(.+)$/);
@@ -83,30 +138,39 @@ export class FakeServer {
       const t = this.publicTopics().find((x) => x.slug === decodeURIComponent(pub[1]!));
       return t ? this.json(this.detail(this.topicRow(t.id)!, true)) : this.json({ message: 'Topic not found' }, 404);
     }
-    if (method === 'GET' && p === '/public/site') return this.json(this.site);
+    if (method === 'GET' && p === '/public/site') return this.json(this.siteView(false));
+    if (method === 'GET' && p === '/public/languages') return this.json(this.languages);
     const page = p.match(/^\/(public\/)?pages\/([^/]+)$/);
     if (page && method === 'GET' && page[1]) {
       const found = this.pages[page[2]!];
-      return found ? this.json(found) : this.json({ message: 'Page not found' }, 404);
+      return found ? this.json(this.pageView(found, false)) : this.json({ message: 'Page not found' }, 404);
     }
 
     if (!this.signedIn) return this.json({ message: 'Valid session required' }, 401);
     if (method === 'GET' && p === '/me') return this.json({ email: 'me@example.com', role: this.role });
     if (this.role === 'viewer') return this.json({ message: 'Requires editor access' }, 403);
 
+    if (p === '/site' && method === 'GET') return this.json(this.siteView(true));
     if (method === 'PUT' && p === '/site') {
-      this.site = { title: String(body['title']).trim(), tagline: String(body['tagline']).trim(), updatedAt: '2026-10-17T00:00:00Z' };
-      return this.json(this.site);
+      const s = this.site;
+      s.title = this.write(s, 'title', String(body['title']).trim(), s.title);
+      s.tagline = this.write(s, 'tagline', String(body['tagline']).trim(), s.tagline);
+      s.updatedAt = '2026-10-17T00:00:00Z';
+      return this.json(this.siteView(true));
     }
-    if (page && method === 'PUT' && !page[1]) {
-      const saved: Page = { slug: page[2] as Page['slug'], body: String(body['body']), updatedAt: '2026-10-17T00:00:00Z' };
-      this.pages[page[2]!] = saved;
-      return this.json(saved);
+    if (page && !page[1]) {
+      const row = this.pages[page[2]!]!;
+      if (method === 'PUT') {
+        row.body = this.write(row, 'body', String(body['body']), row.body);
+        row.updatedAt = '2026-10-17T00:00:00Z';
+      }
+      return this.json(this.pageView(row, true));
     }
+    if (p === '/languages' || p.startsWith('/languages/')) return this.languagesRoute(method, p, body);
     if (p === '/editors' || p.startsWith('/editors/')) return this.editorsRoute(method, p, body);
     if (p === '/topics' && method === 'GET') return this.json(this.topics.map((t) => this.view(t, false)));
     if (p === '/topics' && method === 'POST') {
-      const t: TopicRow = { id: uid(), slug: String(body['title']).toLowerCase(), title: String(body['title']), description: null, status: 'draft', coverPictureId: null };
+      const t: TopicRow = { id: uid(), slug: String(body['title']).toLowerCase(), title: String(body['title']), description: null, status: 'draft', coverPictureId: null, translations: {} };
       this.topics.push(t);
       return this.json(this.detail(t, false), 201);
     }
@@ -138,7 +202,12 @@ export class FakeServer {
         this.pictures = this.pictures.filter((x) => x.topicId !== t.id);
         return new Response(null, { status: 204 });
       }
-      if (method === 'PATCH') Object.assign(t, body);
+      if (method === 'PATCH') {
+        const { title, description, ...shared } = body;
+        Object.assign(t, shared);
+        if (title !== undefined) t.title = this.write(t, 'title', String(title), t.title);
+        if (description !== undefined) t.description = this.write(t, 'description', description as string | null, t.description);
+      }
       return this.json(this.detail(t, false));
     }
     const pic = p.match(/^\/pictures\/([^/]+)(\/image)?$/);
@@ -150,7 +219,13 @@ export class FakeServer {
         return new Response(null, { status: 204 });
       }
       if (pic[2]) row.version += 1;
-      else Object.assign(row, body);
+      else {
+        const { caption, dateText, place, story, ...shared } = body;
+        Object.assign(row, shared);
+        for (const [field, value] of Object.entries({ caption, dateText, place, story })) {
+          if (value !== undefined) row[field as 'caption'] = this.write(row, field, value as string | null, row[field as 'caption']);
+        }
+      }
       return this.json(this.pictureView(row));
     }
     return this.json({ message: 'Not found' }, 404);
@@ -167,6 +242,37 @@ export class FakeServer {
       return this.json({});
     }
     return this.json({}, 404);
+  }
+
+  private languagesRoute(method: string, p: string, body: Record<string, unknown>): Response {
+    const code = decodeURIComponent(p.slice('/languages/'.length));
+    if (method === 'POST') {
+      if (this.languages.some((l) => l.code === body['code'])) return this.json({ message: 'That language is already on the site' }, 409);
+      this.languages.push({ ...(body as Pick<Language, 'code' | 'name' | 'direction'>), isDefault: false, labels: {} });
+      return this.json(this.languages, 201);
+    }
+    const lang = this.languages.find((l) => l.code === code);
+    if (!lang) return this.json({ message: 'Language not found' }, 404);
+    if (method === 'DELETE') {
+      if (lang.isDefault) return this.json({ message: 'Choose another default language before removing this one' }, 400);
+      this.languages = this.languages.filter((l) => l !== lang);
+      return this.json(this.languages);
+    }
+    const { isDefault, ...rest } = body as Partial<Language>;
+    if (isDefault) this.languages = this.languages.map((l) => ({ ...l, isDefault: l.code === code }));
+    this.languages = this.languages.map((l) => (l.code === code ? { ...l, ...rest } : l));
+    return this.json(this.languages);
+  }
+
+  private siteView(admin: boolean): SiteInfo {
+    const s = this.site;
+    const view = { title: this.text(s, 'title', s.title), tagline: this.text(s, 'tagline', s.tagline), updatedAt: s.updatedAt };
+    return admin ? { ...view, translations: s.translations } : view;
+  }
+
+  private pageView(row: Page & { translations: Tr }, admin: boolean): Page {
+    const view = { slug: row.slug, body: this.text(row, 'body', row.body), updatedAt: row.updatedAt };
+    return admin ? { ...view, translations: row.translations } : view;
   }
 
   private editorsRoute(method: string, p: string, body: Record<string, unknown>): Response {
@@ -194,7 +300,17 @@ export class FakeServer {
   private pictureView(x: PictureRow): Picture {
     const position = this.picturesOf(x.topicId, false).indexOf(x);
     const img = `https://img.test/${x.id}/v${x.version}`;
-    return { ...x, position, width: 800, height: 600, images: { display: `${img}/display.jpg`, thumb: `${img}/thumb.jpg` } };
+    return {
+      ...x,
+      caption: this.text(x, 'caption', x.caption),
+      dateText: this.text(x, 'dateText', x.dateText),
+      place: this.text(x, 'place', x.place),
+      story: this.text(x, 'story', x.story),
+      position,
+      width: 800,
+      height: 600,
+      images: { display: `${img}/display.jpg`, thumb: `${img}/thumb.jpg` },
+    };
   }
 
   private view(t: TopicRow, publishedOnly: boolean): Topic {
@@ -202,6 +318,8 @@ export class FakeServer {
     const cover = pics.find((x) => x.id === t.coverPictureId) ?? pics[0];
     return {
       ...t,
+      title: this.text(t, 'title', t.title),
+      description: this.text(t, 'description', t.description),
       position: this.topics.indexOf(t),
       cover: cover ? this.pictureView(cover).images : null,
       pictureCount: pics.length,

@@ -28,6 +28,7 @@ beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
   publicRetry.backoffMs = 0;
   confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+  window.localStorage.clear();
 });
 
 afterEach(() => {
@@ -286,15 +287,14 @@ describe('pages', () => {
   });
 
   it('shows a load error for a page it cannot fetch', async () => {
-    for (let i = 0; i < publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/pages\/about$/, 503, { message: 'Unavailable' });
+    server.failNext(/GET \/api\/content\/pages\/about$/, 503, { message: 'Unavailable' });
     await openAdmin('#/admin/pages');
     const about = screen.getByRole('region', { name: 'About' });
     expect(await within(about).findByRole('alert')).toHaveProperty('textContent', 'Unavailable');
   });
 
   it('shows a load error when the site title cannot be fetched', async () => {
-    // App's own header load and the Pages form each make up to `attempts` requests.
-    for (let i = 0; i < 2 * publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/site$/, 503, { message: 'No site' });
+    server.failNext(/GET \/api\/content\/site$/, 503, { message: 'No site' });
     await openAdmin('#/admin/pages');
     const form = screen.getByRole('region', { name: 'Site title' });
     expect(await within(form).findByRole('alert')).toHaveProperty('textContent', 'No site');
@@ -332,5 +332,112 @@ describe('errorText', () => {
   it('handles non-Error values', () => {
     expect(errorText('plain')).toBe('plain');
     expect(errorText(new Error('boom'))).toBe('boom');
+  });
+});
+
+describe('languages', () => {
+  const row = (name: RegExp): HTMLElement => screen.getByRole('form', { name });
+
+  it('adds, renames, re-directs, sets the default, edits labels and removes languages', async () => {
+    server.role = 'editor';
+    await openAdmin('#/admin/languages');
+    expect(screen.getByRole('link', { name: 'Languages' }).getAttribute('aria-current')).toBe('page');
+    expect(within(row(/^English/)).getByText('Default')).toBeTruthy();
+    expect(within(row(/^English/)).queryByRole('button', { name: 'Remove' })).toBeNull();
+    expect(screen.queryByLabelText('Editing language')).toBeNull();
+
+    const add = screen.getByRole('region', { name: 'Add a language' });
+    fireEvent.change(within(add).getByLabelText('Language code'), { target: { value: 'HE' } });
+    fireEvent.change(within(add).getByLabelText(/^Name/), { target: { value: 'עברית' } });
+    fireEvent.change(within(add).getByLabelText('Text direction'), { target: { value: 'rtl' } });
+    fireEvent.click(within(add).getByRole('button', { name: 'Add language' }));
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'עברית added');
+    expect(server.languages[1]).toMatchObject({ code: 'he', name: 'עברית', direction: 'rtl', isDefault: false });
+    expect((within(add).getByLabelText('Language code') as HTMLInputElement).value).toBe('');
+
+    fireEvent.change(within(add).getByLabelText('Language code'), { target: { value: 'he' } });
+    fireEvent.change(within(add).getByLabelText(/^Name/), { target: { value: 'Hebrew' } });
+    fireEvent.click(within(add).getByRole('button', { name: 'Add language' }));
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'That language is already on the site');
+    expect((within(add).getByLabelText('Language code') as HTMLInputElement).value).toBe('he');
+
+    const he = row(/^עברית/);
+    fireEvent.change(within(he).getByLabelText('Name'), { target: { value: ' Hebrew ' } });
+    fireEvent.change(within(he).getByLabelText('Direction'), { target: { value: 'ltr' } });
+    fireEvent.click(within(he).getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('Hebrew saved')).toBeTruthy();
+    expect(server.languages[1]).toMatchObject({ name: 'Hebrew', direction: 'ltr' });
+
+    fireEvent.click(within(row(/^Hebrew/)).getByRole('button', { name: 'Make default' }));
+    expect(await screen.findByText('Hebrew is now the default language')).toBeTruthy();
+    expect(server.languages.map((l) => l.isDefault)).toEqual([false, true]);
+
+    fireEvent.click(within(row(/^English/)).getByRole('button', { name: 'Labels' }));
+    const labels = screen.getByRole('region', { name: 'English labels' });
+    const galleries = within(labels).getByLabelText('Galleries') as HTMLInputElement;
+    expect(galleries.placeholder).toBe('Galleries');
+    fireEvent.change(galleries, { target: { value: 'Albums' } });
+    fireEvent.change(within(labels).getByLabelText('About'), { target: { value: '  ' } });
+    fireEvent.click(within(labels).getByRole('button', { name: 'Save labels' }));
+    expect(await screen.findByText('English labels saved')).toBeTruthy();
+    expect(server.languages[0]?.labels).toEqual({ 'nav.galleries': 'Albums' });
+    fireEvent.click(within(row(/^English/)).getByRole('button', { name: 'Labels' }));
+    expect(screen.queryByRole('region', { name: 'English labels' })).toBeNull();
+
+    confirmSpy.mockReturnValueOnce(false);
+    fireEvent.click(within(row(/^English/)).getByRole('button', { name: 'Remove' }));
+    expect(server.languages).toHaveLength(2);
+    fireEvent.click(within(row(/^English/)).getByRole('button', { name: 'Remove' }));
+    expect(await screen.findByText('English removed')).toBeTruthy();
+    expect(server.languages.map((l) => l.code)).toEqual(['he']);
+  });
+
+  it('edits topics, pictures, the site title and pages in another language', async () => {
+    server.addLanguage('he', 'עברית', 'rtl');
+    const t = server.addTopic('Streets', 'published', 0);
+    const pic = server.addPicture(t.id, 'published', 'Corner');
+    await openAdmin(`#/admin/topics/${t.id}`);
+
+    const picker = await screen.findByLabelText('Editing language');
+    expect((await screen.findByLabelText('Title') as HTMLInputElement).value).toBe('Streets');
+    fireEvent.change(picker, { target: { value: 'he' } });
+    expect(screen.getByText(/You are editing the עברית text/)).toBeTruthy();
+    const title = screen.getByLabelText('Title') as HTMLInputElement;
+    expect(title).toMatchObject({ value: '', placeholder: 'Streets', dir: 'rtl', required: false });
+    expect((screen.getByLabelText('Description') as HTMLTextAreaElement).placeholder).toBe('');
+    fireEvent.change(title, { target: { value: 'רחובות' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save topic' }));
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Saved');
+    expect(server.urls).toContain(`PATCH /api/content/topics/${t.id}?lang=he`);
+    expect(t).toMatchObject({ title: 'Streets', translations: { he: { title: 'רחובות' } } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Corner' }));
+    const dialog = screen.getByRole('dialog', { name: 'Edit picture' });
+    const caption = within(dialog).getByLabelText('Caption') as HTMLInputElement;
+    expect(caption).toMatchObject({ value: '', placeholder: 'Corner', dir: 'rtl' });
+    expect((within(dialog).getByLabelText('Date / year') as HTMLInputElement).placeholder).toBe('e.g. Summer 1974');
+    fireEvent.change(caption, { target: { value: 'מכולת' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('Picture saved')).toBeTruthy();
+    expect(pic).toMatchObject({ caption: 'Corner', translations: { he: { caption: 'מכולת' } } });
+
+    go('#/admin/pages');
+    const site = screen.getByRole('region', { name: 'Site title' });
+    const siteTitle = (await within(site).findByLabelText('Title')) as HTMLInputElement;
+    expect(siteTitle).toMatchObject({ value: '', placeholder: 'Memory', required: false });
+    fireEvent.change(siteTitle, { target: { value: 'זיכרון' } });
+    fireEvent.click(within(site).getByRole('button', { name: 'Save site title' }));
+    expect(await within(site).findByRole('status')).toHaveProperty('textContent', 'Site title saved');
+    expect(server.site.translations).toEqual({ he: { title: 'זיכרון' } });
+
+    const about = (await screen.findByLabelText('About text')) as HTMLTextAreaElement;
+    expect(about).toMatchObject({ value: '', placeholder: 'About this site.' });
+    fireEvent.change(about, { target: { value: 'על האתר.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save About' }));
+    expect(await screen.findByText('About page saved')).toBeTruthy();
+    expect(server.pages['about']).toMatchObject({ body: 'About this site.', translations: { he: { body: 'על האתר.' } } });
+
+    go('#/admin');
+    expect(screen.queryByLabelText('Editing language')).toBeNull();
   });
 });

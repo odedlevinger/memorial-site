@@ -18,6 +18,7 @@ beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
   publicRetry.backoffMs = 0;
   window.location.hash = '#/';
+  window.localStorage.clear();
 });
 
 afterEach(() => {
@@ -30,7 +31,6 @@ describe('public site', () => {
     server.addTopic('Streets');
     server.addTopic('Hidden', 'draft');
     render(<App />);
-    expect(screen.getByText('Loading…')).toBeTruthy();
     const nav = await screen.findByRole('navigation', { name: 'Main' });
     expect(within(nav).getByRole('link', { name: 'Streets' })).toBeTruthy();
     expect(within(nav).queryByRole('link', { name: 'Hidden' })).toBeNull();
@@ -144,9 +144,8 @@ describe('public site', () => {
 
 describe('site title', () => {
   it('shows the saved title and falls back to the default when it cannot load', async () => {
-    server.site = { title: 'Lavi', tagline: '1940–2025', updatedAt: null };
+    server.site = { title: 'Lavi', tagline: '1940–2025', updatedAt: null, translations: {} };
     const { unmount } = render(<App />);
-    expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
     expect(await screen.findByRole('link', { name: 'Lavi' })).toBeTruthy();
     expect(screen.getByText('1940–2025')).toBeTruthy();
     unmount();
@@ -164,6 +163,7 @@ describe('about and contact', () => {
       slug: 'contact',
       body: 'Write to family@example.com.\nOr visit https://example.com/memory).\n\n\nThanks',
       updatedAt: null,
+      translations: {},
     };
     window.location.hash = '#/contact';
     render(<App />);
@@ -210,5 +210,104 @@ describe('account', () => {
     await act(async () => release());
     expect(screen.getByRole('heading', { name: 'About' })).toBeTruthy();
     expect(screen.queryByText('me@example.com')).toBeNull();
+  });
+});
+
+describe('languages', () => {
+  it('holds the page until the language list arrives, then shows loading until the galleries do', async () => {
+    const languages = server.hold(/GET \/api\/content\/public\/languages$/);
+    const topics = server.hold(/GET \/api\/content\/public\/topics$/);
+    const site = server.hold(/GET \/api\/content\/public\/site$/);
+    render(<App />);
+    expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
+    await act(async () => languages());
+    expect(await screen.findByText('Loading…')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
+    await act(async () => {
+      topics();
+      site();
+    });
+    expect(await screen.findByText('No galleries yet.')).toBeTruthy();
+  });
+
+  it('has no switcher with one language, and stays English when the list cannot load', async () => {
+    for (let i = 0; i < publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/languages$/, 503);
+    render(<App />);
+    const nav = await screen.findByRole('navigation', { name: 'Main' });
+    expect(within(nav).getByRole('link', { name: 'Galleries' })).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Language' })).toBeNull();
+  });
+
+  it('switches language: labels, direction, content and the visitor’s choice', async () => {
+    server.addLanguage('he', 'עברית', 'rtl');
+    const t = server.addTopic('Streets');
+    t.translations = { he: { title: 'רחובות' } };
+    server.site.translations = { he: { title: 'זיכרון' } };
+    const { unmount } = render(<App />);
+    const switcher = await screen.findByRole('group', { name: 'Language' });
+    expect(within(switcher).getByRole('button', { name: 'English' }).getAttribute('aria-pressed')).toBe('true');
+    expect(document.documentElement.dir).toBe('ltr');
+
+    fireEvent.click(within(switcher).getByRole('button', { name: 'עברית' }));
+    const nav = await screen.findByRole('navigation', { name: 'ראשי' });
+    expect(await within(nav).findByRole('link', { name: 'רחובות' })).toBeTruthy();
+    expect(within(nav).getByRole('link', { name: 'גלריות' })).toBeTruthy();
+    expect(await screen.findByRole('link', { name: 'זיכרון' })).toBeTruthy();
+    expect(document.documentElement).toMatchObject({ dir: 'rtl', lang: 'he' });
+    expect(server.urls).toContain('GET /api/content/public/topics?lang=he');
+    expect(window.localStorage.getItem('memory.language')).toBe('he');
+    unmount();
+
+    // remembered on the next visit, and editor label overrides win over built-in labels
+    server.languages[1] = { ...server.languages[1]!, labels: { 'nav.about': 'על האתר' } };
+    render(<App />);
+    const again = await screen.findByRole('navigation', { name: 'ראשי' });
+    expect(within(again).getByRole('link', { name: 'על האתר' })).toBeTruthy();
+    fireEvent.click(within(again).getByRole('button', { name: 'English' }));
+    expect(await screen.findByRole('navigation', { name: 'Main' })).toBeTruthy();
+  });
+
+  it('keeps the language list when a later refresh cannot load it', async () => {
+    server.addLanguage('he', 'עברית', 'rtl');
+    window.location.hash = '#/account';
+    render(<App />);
+    expect(await screen.findByRole('group', { name: 'Language' })).toBeTruthy();
+    for (let i = 0; i < publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/languages$/, 503);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(server.calls.filter((c) => c === 'GET /api/content/public/languages').length).toBeGreaterThan(publicRetry.attempts));
+    expect(screen.getByRole('group', { name: 'Language' })).toBeTruthy();
+  });
+
+  it('shows galleries, the viewer and pages in the chosen language; the viewer mirrors right to left', async () => {
+    server.addLanguage('he', 'עברית', 'rtl');
+    window.localStorage.setItem('memory.language', 'he');
+    const t = server.addTopic('Streets', 'published', 0);
+    t.translations = { he: { title: 'רחובות' } };
+    const p = server.addPicture(t.id, 'published', 'Corner shop');
+    p.translations = { he: { caption: 'המכולת' } };
+    server.addPicture(t.id, 'published');
+    server.pages['about']!.translations = { he: { body: 'על האתר הזה.' } };
+    window.location.hash = '#/galleries/streets';
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'רחובות' })).toBeTruthy();
+    expect(server.urls).toContain('GET /api/content/public/topics/streets?lang=he');
+    fireEvent.click(screen.getByRole('button', { name: 'פתיחת תמונה 1' }));
+    const label = (): string | null => screen.getByRole('dialog').getAttribute('aria-label');
+    expect(label()).toBe('רחובות — תמונה 1 מתוך 2');
+    expect(within(screen.getByRole('dialog')).getByText('המכולת')).toBeTruthy();
+    fireEvent.keyDown(window, { key: 'ArrowLeft' }); // next, in right-to-left
+    expect(label()).toBe('רחובות — תמונה 2 מתוך 2');
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    expect(label()).toBe('רחובות — תמונה 1 מתוך 2');
+    const figure = screen.getByRole('figure');
+    fireEvent.touchStart(figure, { touches: [{ clientX: 100 }] });
+    fireEvent.touchEnd(figure, { changedTouches: [{ clientX: 300 }] }); // swipe right = next
+    expect(label()).toBe('רחובות — תמונה 2 מתוך 2');
+    fireEvent.click(screen.getByRole('button', { name: 'סגירה' }));
+
+    go('#/about');
+    expect(await screen.findByText('על האתר הזה.')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'אודות' })).toBeTruthy();
   });
 });

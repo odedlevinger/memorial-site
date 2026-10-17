@@ -50,9 +50,10 @@ describe('SeedService', () => {
     expect(await svc.importPlaceholders()).toBe(1);
 
     const topics = app.get(TopicsService);
-    const published = await topics.listPublished();
+    const en = { code: 'en', defaultCode: 'en' };
+    const published = await topics.listPublished(en);
     expect(published.map((t) => t.title)).toEqual(['Streets']);
-    expect((await topics.listAll()).map((t) => [t.title, t.status])).toEqual([
+    expect((await topics.listAll(en)).map((t) => [t.title, t.status])).toEqual([
       ['Streets', 'published'],
       ['Nothing', 'published'],
     ]);

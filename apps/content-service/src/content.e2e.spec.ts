@@ -285,7 +285,12 @@ describe('site title', () => {
 
     await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);
     const saved = await http().put('/content/site').set(as(EDITOR)).send({ title: '  Grandpa Lavi ', tagline: ' ' }).expect(200);
-    expect(saved.body).toEqual({ title: 'Grandpa Lavi', tagline: '', updatedAt: expect.any(String) });
+    expect(saved.body).toEqual({
+      title: 'Grandpa Lavi',
+      tagline: '',
+      updatedAt: expect.any(String),
+      translations: { en: { title: 'Grandpa Lavi', tagline: '' } },
+    });
     await http().put('/content/site').set(as(OWNER)).send({ title: 'Lavi', tagline: '1940–2025' }).expect(200);
     await http().get('/content/public/site').expect(200).expect((r) => expect(r.body).toMatchObject({ title: 'Lavi', tagline: '1940–2025' }));
   });

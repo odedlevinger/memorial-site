@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { googleSignIn, type AuthUser } from './api';
+import { useI18n } from './i18n';
 
 const CLIENT_ID: string = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -12,6 +13,8 @@ interface LoginProps {
 export function Login({ onSignedIn }: LoginProps): ReactElement {
   const buttonRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const { current, t } = useI18n();
+  const failed = t('account.signInFailed');
 
   useEffect(() => {
     if (!CLIENT_ID) return;
@@ -26,11 +29,11 @@ export function Login({ onSignedIn }: LoginProps): ReactElement {
           void googleSignIn(response.credential).then((user) => {
             if (cancelled) return;
             if (user) onSignedIn(user);
-            else setError('Sign-in failed — please try again.');
+            else setError(failed);
           });
         },
       });
-      gid.renderButton(buttonRef.current, { theme: 'outline', size: 'large', text: 'signin_with' });
+      gid.renderButton(buttonRef.current, { theme: 'outline', size: 'large', text: 'signin_with', locale: current.code });
       return true;
     };
 
@@ -43,7 +46,7 @@ export function Login({ onSignedIn }: LoginProps): ReactElement {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [onSignedIn]);
+  }, [onSignedIn, failed, current.code]);
 
   if (!CLIENT_ID) {
     return (

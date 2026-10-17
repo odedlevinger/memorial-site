@@ -19,7 +19,7 @@ interface GoogleAccountsId {
   }): void;
   renderButton(
     parent: HTMLElement,
-    options: { theme?: string; size?: string; text?: string; width?: number },
+    options: { theme?: string; size?: string; text?: string; width?: number; locale?: string },
   ): void;
 }
 interface Window {

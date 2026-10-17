@@ -5,6 +5,12 @@ export const CONTENT_STATUSES: readonly ContentStatus[] = ['draft', 'published']
 
 export type Role = 'owner' | 'editor' | 'viewer';
 
+/**
+ * Per-language text for a row: language code → field → text. The row's own columns hold
+ * the default language's text; a field missing here falls back to the default language.
+ */
+export type Translations = Record<string, Record<string, string>>;
+
 /** Image URLs for one picture (display size + thumbnail). */
 export interface PictureImages {
   readonly display: string;
@@ -23,6 +29,8 @@ export interface PictureView {
   readonly width: number;
   readonly height: number;
   readonly images: PictureImages;
+  /** Back office only: every language's text, for editing translations. */
+  readonly translations?: Translations;
 }
 
 export interface TopicView {
@@ -35,6 +43,8 @@ export interface TopicView {
   readonly coverPictureId: string | null;
   readonly cover: PictureImages | null;
   readonly pictureCount: number;
+  /** Back office only: every language's text, for editing translations. */
+  readonly translations?: Translations;
 }
 
 export interface TopicDetailView extends TopicView {
@@ -77,6 +87,8 @@ export interface PageView {
   readonly body: string;
   /** null while the page still shows its built-in default text. */
   readonly updatedAt: string | null;
+  /** Back office only: every language's text, for editing translations. */
+  readonly translations?: Translations;
 }
 
 /** The site's name and tagline, shown in the header. */
@@ -86,4 +98,27 @@ export interface SiteView {
   readonly tagline: string;
   /** null while the site still uses the built-in defaults. */
   readonly updatedAt: string | null;
+  /** Back office only: every language's text, for editing translations. */
+  readonly translations?: Translations;
+}
+
+export type Direction = 'ltr' | 'rtl';
+export const DIRECTIONS: readonly Direction[] = ['ltr', 'rtl'];
+
+/** A language the site is offered in. Exactly one is the default. */
+export interface LanguageView {
+  /** Lower-case language tag, e.g. `en`, `he`, `pt-br`. */
+  readonly code: string;
+  /** Shown in the language switcher, ideally in the language itself (e.g. עברית). */
+  readonly name: string;
+  readonly direction: Direction;
+  readonly isDefault: boolean;
+  /** Editor overrides for the site's fixed labels (menu, buttons, messages), by label key. */
+  readonly labels: Readonly<Record<string, string>>;
+}
+
+/** Which language a request reads or writes, and the site's default language. */
+export interface LangContext {
+  readonly code: string;
+  readonly defaultCode: string;
 }

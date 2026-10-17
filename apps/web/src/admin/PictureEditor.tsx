@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactElement } from 'react';
-import { contentApi, type ContentStatus, type Picture, type Topic } from '../content';
+import { contentApi, type ContentStatus, type Language, type Picture, type Topic } from '../content';
+import { inputLang, textIn } from './translation';
 import { errorText } from './useAsync';
 
 interface PictureEditorProps {
   readonly picture: Picture;
+  /** Caption, date, place and story are edited in this language. */
+  readonly lang: Language;
   readonly topics: readonly Topic[];
   readonly onClose: () => void;
   readonly onSaved: (message: string) => void;
@@ -22,12 +25,12 @@ interface Fields {
 const orNull = (s: string): string | null => (s.trim() ? s.trim() : null);
 
 /** Modal editor for one picture: captions, status, move, replace image, delete. */
-export function PictureEditor({ picture, topics, onClose, onSaved }: PictureEditorProps): ReactElement {
+export function PictureEditor({ picture, lang, topics, onClose, onSaved }: PictureEditorProps): ReactElement {
   const [f, setF] = useState<Fields>({
-    caption: picture.caption ?? '',
-    dateText: picture.dateText ?? '',
-    place: picture.place ?? '',
-    story: picture.story ?? '',
+    caption: textIn(picture, 'caption', picture.caption, lang),
+    dateText: textIn(picture, 'dateText', picture.dateText, lang),
+    place: textIn(picture, 'place', picture.place, lang),
+    story: textIn(picture, 'story', picture.story, lang),
     status: picture.status,
     topicId: picture.topicId,
   });
@@ -57,7 +60,7 @@ export function PictureEditor({ picture, topics, onClose, onSaved }: PictureEdit
           story: orNull(f.story),
           status: f.status,
           ...(f.topicId !== picture.topicId ? { topicId: f.topicId } : {}),
-        }),
+        }, lang.code),
       f.topicId !== picture.topicId ? 'Picture saved and moved' : 'Picture saved',
     );
   };
@@ -72,15 +75,17 @@ export function PictureEditor({ picture, topics, onClose, onSaved }: PictureEdit
   };
 
   const set = <K extends keyof Fields>(k: K, v: Fields[K]): void => setF({ ...f, [k]: v });
+  /** In another language, the default language's text shows greyed until translated. */
+  const hint = (base: string | null): string | undefined => (lang.isDefault ? undefined : (base ?? undefined));
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Edit picture">
       <form className="modal admin-form" onSubmit={save}>
         <img className="modal-preview" src={picture.images.display} alt="" />
-        <label>Caption<input value={f.caption} maxLength={300} onChange={(e): void => set('caption', e.target.value)} /></label>
-        <label>Date / year<input value={f.dateText} maxLength={60} placeholder="e.g. Summer 1974" onChange={(e): void => set('dateText', e.target.value)} /></label>
-        <label>Place<input value={f.place} maxLength={120} onChange={(e): void => set('place', e.target.value)} /></label>
-        <label>Story<textarea value={f.story} maxLength={5000} rows={5} onChange={(e): void => set('story', e.target.value)} /></label>
+        <label>Caption<input value={f.caption} maxLength={300} placeholder={hint(picture.caption)} {...inputLang(lang)} onChange={(e): void => set('caption', e.target.value)} /></label>
+        <label>Date / year<input value={f.dateText} maxLength={60} placeholder={hint(picture.dateText) ?? 'e.g. Summer 1974'} {...inputLang(lang)} onChange={(e): void => set('dateText', e.target.value)} /></label>
+        <label>Place<input value={f.place} maxLength={120} placeholder={hint(picture.place)} {...inputLang(lang)} onChange={(e): void => set('place', e.target.value)} /></label>
+        <label>Story<textarea value={f.story} maxLength={5000} rows={5} placeholder={hint(picture.story)} {...inputLang(lang)} onChange={(e): void => set('story', e.target.value)} /></label>
         <label>Status
           <select value={f.status} onChange={(e): void => set('status', e.target.value as ContentStatus)}>
             <option value="draft">Draft (hidden)</option>

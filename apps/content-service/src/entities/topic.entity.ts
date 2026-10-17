@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import type { ContentStatus } from '../interfaces/content.interfaces.js';
+import type { ContentStatus, Translations } from '../interfaces/content.interfaces.js';
 import { PictureEntity } from './picture.entity.js';
 
 @Entity('topics')
@@ -24,6 +24,10 @@ export class TopicEntity {
 
   @Column({ type: 'varchar', length: 16, default: 'draft' })
   status!: ContentStatus;
+
+  /** Other languages' text (and the default's), see Translations. null = none yet. */
+  @Column({ type: 'simple-json', nullable: true })
+  translations!: Translations | null;
 
   @OneToMany(() => PictureEntity, (p) => p.topic)
   pictures?: PictureEntity[];
