@@ -72,6 +72,7 @@ jobs:
             --project "$GCP_PROJECT_ID" \
             --region "$GCP_REGION" \
             --platform managed \
+            --cpu-boost \
             --port 8000 \
             --allow-unauthenticated \
             --service-account "kong-gateway@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \

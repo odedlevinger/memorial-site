@@ -74,6 +74,25 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
+/**
+ * Public reads are the first thing a visitor waits on. After a quiet spell the
+ * Cloud Run chain (nginx → Kong → content-service) cold-starts, which can stall
+ * or 5xx a request, so these time out and retry instead of hanging on "Loading…".
+ */
+export const publicRetry = { attempts: 3, timeoutMs: 15_000, backoffMs: 1_000 };
+
+async function publicCall<T>(path: string): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await call<T>(path, { signal: AbortSignal.timeout(publicRetry.timeoutMs) });
+    } catch (err) {
+      const clientError = err instanceof ApiError && err.status < 500;
+      if (clientError || attempt >= publicRetry.attempts) throw err;
+      await new Promise((r) => setTimeout(r, publicRetry.backoffMs * attempt));
+    }
+  }
+}
+
 const json = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) });
 const file = (field: string, f: File): FormData => {
   const form = new FormData();
@@ -82,8 +101,8 @@ const file = (field: string, f: File): FormData => {
 };
 
 export const contentApi = {
-  publicTopics: (): Promise<Topic[]> => call('/public/topics'),
-  publicTopic: (slug: string): Promise<TopicDetail> => call(`/public/topics/${encodeURIComponent(slug)}`),
+  publicTopics: (): Promise<Topic[]> => publicCall('/public/topics'),
+  publicTopic: (slug: string): Promise<TopicDetail> => publicCall(`/public/topics/${encodeURIComponent(slug)}`),
 
   /** The caller's back-office role; 'viewer' when signed out. */
   me: async (): Promise<Role> => {

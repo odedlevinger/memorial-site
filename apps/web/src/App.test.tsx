@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from './App';
+import { publicRetry } from './content';
 import { FakeServer } from './test/fakeServer';
 
 let server: FakeServer;
@@ -15,6 +16,7 @@ beforeEach(() => {
   server = new FakeServer();
   vi.stubGlobal('fetch', server.fetch);
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+  publicRetry.backoffMs = 0;
   window.location.hash = '#/';
 });
 
@@ -44,9 +46,18 @@ describe('public site', () => {
     expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull();
   });
 
-  it('treats an unreachable content API as no galleries', async () => {
-    server.failNext(/GET \/api\/content\/public\/topics$/);
+  it('retries a failed topics load (e.g. a cold start) before giving up', async () => {
+    server.addTopic('Streets');
+    server.failNext(/GET \/api\/content\/public\/topics$/, 503);
     render(<App />);
+    const nav = await screen.findByRole('navigation', { name: 'Main' });
+    expect(await within(nav).findByRole('link', { name: 'Streets' })).toBeTruthy();
+  });
+
+  it('offers a retry when the content API stays unreachable', async () => {
+    for (let i = 0; i < publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/topics$/, 503);
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('No galleries yet.')).toBeTruthy();
   });
 

@@ -14,14 +14,16 @@ export default function App(): ReactElement {
   const route = useRoute();
   const [topics, setTopics] = useState<readonly Topic[] | null>(null);
   const [role, setRole] = useState<Role>('viewer');
+  const [loadFailed, setLoadFailed] = useState(false);
   const [version, setVersion] = useState(0);
   const refresh = useCallback((): void => setVersion((v) => v + 1), []);
 
   useEffect(() => {
     let active = true;
+    setLoadFailed(false);
     contentApi.publicTopics().then(
       (list) => active && setTopics(list),
-      () => active && setTopics([]),
+      () => active && setLoadFailed(true),
     );
     void contentApi.me().then((r) => active && setRole(r));
     return (): void => {
@@ -33,7 +35,18 @@ export default function App(): ReactElement {
     <div className="site">
       <Header topics={topics ?? []} role={role} />
       <main className="site-main">
-        {topics === null ? <p className="empty">Loading…</p> : renderPage(route, topics, role, refresh)}
+        {topics !== null ? (
+          renderPage(route, topics, role, refresh)
+        ) : loadFailed ? (
+          <div className="empty">
+            <p>Couldn’t load the galleries.</p>
+            <button className="btn" onClick={refresh}>
+              Try again
+            </button>
+          </div>
+        ) : (
+          <p className="empty">Loading…</p>
+        )}
       </main>
       <footer className="site-footer">
         <p>© {new Date().getFullYear()} Memory</p>

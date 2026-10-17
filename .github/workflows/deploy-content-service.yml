@@ -70,6 +70,7 @@ jobs:
             --project "$GCP_PROJECT_ID" \
             --region "$GCP_REGION" \
             --platform managed \
+            --cpu-boost \
             --port 3002 \
             --memory 1Gi \
             --no-allow-unauthenticated \

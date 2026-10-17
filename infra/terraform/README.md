@@ -15,6 +15,7 @@ Manages the shared Cloud SQL instance and per-service databases/users on GCP.
 | `iam.tf` | Kong gateway service account + Cloud Run invoker bindings |
 | `vpc.tf` / `load-balancer.tf` / `web-load-balancer.tf` / `dns.tf` | Network perimeter, Global HTTPS LBs, DNS zone |
 | `logging.tf` / `infra-manager.tf` | Log sinks + Infrastructure Manager deployment |
+| `keep-warm.tf` | Cloud Scheduler ping (every 5 min) that keeps the public read path out of cold start |
 | `outputs.tf` | Connection string + foundation outputs (store secret values in Secret Manager) |
 | `terraform.tfvars.example` | Template — copy to `terraform.tfvars` (git-ignored) |
 
