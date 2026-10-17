@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { Role, SiteInfo, Topic } from '../content';
 import { useI18n } from '../i18n';
 import { hrefFor } from '../route';
+import { Flag } from './Flag';
 
 interface HeaderProps {
   /** null while loading — the wordmark stays empty rather than flashing a default. */
@@ -11,67 +12,114 @@ interface HeaderProps {
   readonly role: Role;
 }
 
+/** Menu button top left, site title in the middle, language flags top right — in every language. */
 export function Header({ site, topics, role }: HeaderProps): ReactElement {
-  const { t } = useI18n();
+  const { current, t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const close = (): void => setMenuOpen(false);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return (): void => window.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
+
   return (
     <header className="site-header">
-      <a className="wordmark" href={hrefFor({ page: 'home' })} onClick={close} aria-label={site?.title ?? t('nav.home')}>
-        <span className="wordmark-name">{site?.title}</span>
-        {site?.tagline && <span className="wordmark-sub">{site.tagline}</span>}
-      </a>
-      <button
-        className="menu-toggle"
-        aria-expanded={menuOpen}
-        aria-controls="site-nav"
-        onClick={(): void => setMenuOpen((open) => !open)}
-      >
-        {menuOpen ? t('nav.close') : t('nav.menu')}
-      </button>
+      <div className="header-bar">
+        <button
+          className={menuOpen ? 'menu-toggle open' : 'menu-toggle'}
+          aria-expanded={menuOpen}
+          aria-controls="site-nav"
+          aria-label={menuOpen ? t('nav.close') : t('nav.menu')}
+          onClick={(): void => setMenuOpen((open) => !open)}
+        >
+          <span className="hamburger" aria-hidden="true" />
+        </button>
+        <a className="wordmark" dir={current.direction} href={hrefFor({ page: 'home' })} onClick={close} aria-label={site?.title ?? t('nav.home')}>
+          <span className="wordmark-name">{site?.title}</span>
+          {site?.tagline && <span className="wordmark-sub">{site.tagline}</span>}
+        </a>
+        <LanguageSwitch />
+      </div>
+      {menuOpen && <div className="nav-backdrop" onClick={close} aria-hidden="true" />}
       <nav id="site-nav" className={menuOpen ? 'site-nav open' : 'site-nav'} aria-label={t('nav.main')}>
-        <div className="nav-group">
-          <a href={hrefFor({ page: 'home' })} onClick={close}>{t('nav.galleries')}</a>
-          <ul className="nav-sub">
-            {topics.map((topic) => (
-              <li key={topic.id}>
-                <a href={hrefFor({ page: 'gallery', slug: topic.slug })} onClick={close}>{topic.title}</a>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <a href={hrefFor({ page: 'home' })} onClick={close}>{t('nav.galleries')}</a>
+        <ul className="nav-sub">
+          {topics.map((topic) => (
+            <li key={topic.id}>
+              <a href={hrefFor({ page: 'gallery', slug: topic.slug })} onClick={close}>{topic.title}</a>
+            </li>
+          ))}
+        </ul>
         <a href={hrefFor({ page: 'about' })} onClick={close}>{t('nav.about')}</a>
         <a href={hrefFor({ page: 'contact' })} onClick={close}>{t('nav.contact')}</a>
         {role !== 'viewer' && <a href={hrefFor({ page: 'admin' })} onClick={close}>{t('nav.admin')}</a>}
         <a href={hrefFor({ page: 'account' })} onClick={close}>{role === 'viewer' ? t('nav.signIn') : t('nav.account')}</a>
-        <LanguageSwitch onPick={close} />
       </nav>
     </header>
   );
 }
 
-/** One button per language, each named in its own language; hidden when there is only one. */
-function LanguageSwitch({ onPick }: { readonly onPick: () => void }): ReactElement | null {
+/**
+ * Only the current language's flag shows; it opens a list of the others (flag and name, in
+ * their own language). An empty slot keeps the title centred when there is one language.
+ */
+function LanguageSwitch(): ReactElement {
   const { languages, current, setLanguage, t } = useI18n();
-  if (languages.length < 2) return null;
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return (): void => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  if (languages.length < 2) return <span className="lang-switch" />;
   return (
     <div className="lang-switch" role="group" aria-label={t('nav.language')}>
-      {languages.map((l) => (
-        <button
-          key={l.code}
-          type="button"
-          lang={l.code}
-          dir={l.direction}
-          aria-pressed={l.code === current.code}
-          onClick={(): void => {
-            setLanguage(l.code);
-            onPick();
-          }}
-        >
-          {l.name}
-        </button>
-      ))}
+      <button
+        type="button"
+        className="lang-current"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-label={`${t('nav.language')}: ${current.name}`}
+        title={current.name}
+        onClick={(): void => setOpen((o) => !o)}
+      >
+        <Flag code={current.code} />
+      </button>
+      {open && (
+        <>
+          <div className="lang-backdrop" onClick={(): void => setOpen(false)} aria-hidden="true" />
+          <ul className="lang-menu">
+            {languages
+              .filter((l) => l.code !== current.code)
+              .map((l) => (
+                <li key={l.code}>
+                  <button
+                    type="button"
+                    lang={l.code}
+                    dir={l.direction}
+                    onClick={(): void => {
+                      setLanguage(l.code);
+                      setOpen(false);
+                    }}
+                  >
+                    <Flag code={l.code} />
+                    <span>{l.name}</span>
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
