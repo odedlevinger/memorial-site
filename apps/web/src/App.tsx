@@ -70,6 +70,7 @@ function renderPage(route: Route, topics: readonly Topic[], role: Role, refresh:
     case 'admin':
     case 'admin-topic':
     case 'admin-editors':
+    case 'admin-pages':
       return <AdminApp route={route} role={role} onContentChanged={refresh} />;
     default:
       return <NotFound />;

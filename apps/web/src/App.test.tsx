@@ -142,6 +142,32 @@ describe('public site', () => {
   });
 });
 
+describe('about and contact', () => {
+  it('renders the saved text with paragraphs, line breaks and links', async () => {
+    server.pages['contact'] = {
+      slug: 'contact',
+      body: 'Write to family@example.com.\nOr visit https://example.com/memory).\n\n\nThanks',
+      updatedAt: null,
+    };
+    window.location.hash = '#/contact';
+    render(<App />);
+    const mail = await screen.findByRole('link', { name: 'family@example.com' });
+    expect(mail.getAttribute('href')).toBe('mailto:family@example.com');
+    expect(screen.getByRole('link', { name: 'https://example.com/memory' }).getAttribute('href')).toBe('https://example.com/memory');
+    const article = screen.getByRole('article');
+    expect(article.querySelectorAll('p')).toHaveLength(2);
+    expect(article.querySelectorAll('br')).toHaveLength(1);
+    expect(article.textContent).toContain('https://example.com/memory).');
+  });
+
+  it('says so when the page cannot be loaded', async () => {
+    for (let i = 0; i < publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/pages\/about$/, 503);
+    window.location.hash = '#/about';
+    render(<App />);
+    expect(await screen.findByText(/Couldn’t load this page/)).toBeTruthy();
+  });
+});
+
 describe('account', () => {
   it('signs out and back to viewer, hiding the Admin link', async () => {
     window.location.hash = '#/account';

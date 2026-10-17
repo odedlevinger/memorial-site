@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '../App';
+import { publicRetry } from '../content';
 import { FakeServer } from '../test/fakeServer';
 import { errorText } from './useAsync';
 
@@ -25,6 +26,7 @@ beforeEach(() => {
   server = new FakeServer();
   vi.stubGlobal('fetch', server.fetch);
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+  publicRetry.backoffMs = 0;
   confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 });
 
@@ -240,6 +242,35 @@ describe('editors', () => {
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Could not remove');
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
     expect(await screen.findByText('No editors yet.')).toBeTruthy();
+  });
+});
+
+describe('pages', () => {
+  it('editors change the About and Contact text', async () => {
+    server.role = 'editor';
+    await openAdmin('#/admin/pages');
+    const tabs = screen.getByRole('navigation', { name: 'Back office' });
+    expect(within(tabs).getByRole('link', { name: 'Pages' }).getAttribute('aria-current')).toBe('page');
+    expect(within(tabs).queryByRole('link', { name: 'Editors' })).toBeNull();
+
+    const about = await screen.findByLabelText('About text');
+    expect((about as HTMLTextAreaElement).value).toBe('About this site.');
+    fireEvent.change(about, { target: { value: 'Our story.\n\nMore.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save About' }));
+    expect(await screen.findByText('About page saved')).toBeTruthy();
+    expect(server.pages['about']?.body).toBe('Our story.\n\nMore.');
+
+    server.failNext(/PUT \/api\/content\/pages\/contact$/, 400, { message: ['body must be shorter'] });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Contact' }));
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'body must be shorter');
+    expect(screen.getByRole('link', { name: 'Topics' }).getAttribute('aria-current')).toBeNull();
+  });
+
+  it('shows a load error for a page it cannot fetch', async () => {
+    for (let i = 0; i < publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/pages\/about$/, 503, { message: 'Unavailable' });
+    await openAdmin('#/admin/pages');
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Unavailable');
+    expect(await screen.findByLabelText('Contact text')).toBeTruthy();
   });
 });
 

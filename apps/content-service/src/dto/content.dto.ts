@@ -118,3 +118,11 @@ export class AddEditorDto {
   @MaxLength(254)
   email!: string;
 }
+
+export class UpdatePageDto {
+  @ApiProperty({ maxLength: 10000, description: 'plain text; blank lines separate paragraphs' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(10000)
+  body!: string;
+}
