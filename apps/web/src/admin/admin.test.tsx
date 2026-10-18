@@ -443,11 +443,21 @@ describe('pages', () => {
     expect(within(header).queryByText('a life in photographs')).toBeNull();
     expect(screen.getByRole('contentinfo').textContent).toContain('Grandpa Lavi');
 
-    const homeRow = screen.getByRole('group', { name: 'Galleries per row on the home page' });
-    expect((within(homeRow).getByRole('radio', { name: '3' }) as HTMLInputElement).checked).toBe(true);
-    fireEvent.click(within(homeRow).getByRole('radio', { name: '2' }));
+    const rows = screen.getByRole('group', { name: 'Galleries per row on the home page' });
+    const row = (n: number): HTMLElement => within(rows).getByRole('group', { name: `Row ${n}` });
+    expect((within(row(1)).getByRole('radio', { name: '3' }) as HTMLInputElement).checked).toBe(true);
+    expect(within(rows).getByRole('button', { name: 'Remove row 1' })).toHaveProperty('disabled', true);
+    fireEvent.click(within(row(1)).getByRole('radio', { name: '1' }));
+    fireEvent.click(within(rows).getByRole('button', { name: '+ Add row' }));
+    expect((within(row(2)).getByRole('radio', { name: '1' }) as HTMLInputElement).checked).toBe(true); // copies the last row
+    fireEvent.click(within(row(2)).getByRole('radio', { name: '3' }));
+    fireEvent.click(within(rows).getByRole('button', { name: '+ Add row' }));
+    fireEvent.click(within(row(3)).getByRole('radio', { name: '2' }));
+    expect(within(rows).getByText('Galleries after row 3 use 2 per row.')).toBeTruthy();
+    fireEvent.click(within(rows).getByRole('button', { name: 'Remove row 2' }));
+    expect(within(rows).getByText('Galleries after row 2 use 2 per row.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Save site settings' }));
-    await waitFor(() => expect(server.site.homeColumns).toBe(2));
+    await waitFor(() => expect(server.site.homeRows).toEqual([1, 2]));
 
     server.failNext(/PUT \/api\/content\/site$/, 400, { message: ['title must not be empty'] });
     fireEvent.click(screen.getByRole('button', { name: 'Save site settings' }));

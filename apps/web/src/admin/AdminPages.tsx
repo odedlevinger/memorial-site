@@ -35,7 +35,38 @@ export function AdminPages({ lang, onChanged }: AdminPagesProps): ReactElement {
 interface SiteFields {
   title: string;
   tagline: string;
-  homeColumns: GridColumns;
+  homeRows: readonly GridColumns[];
+}
+
+/** Same limit as content-service's MAX_HOME_ROWS. */
+const MAX_HOME_ROWS = 50;
+
+/** One 1 / 2 / 3 choice per home page row, top to bottom; rows can be added and removed. */
+function HomeRows({ rows, onChange }: { readonly rows: readonly GridColumns[]; readonly onChange: (rows: readonly GridColumns[]) => void }): ReactElement {
+  const last = rows[rows.length - 1] as GridColumns; // never empty: the last row can't be removed
+  return (
+    <fieldset className="admin-rows">
+      <legend>Galleries per row on the home page</legend>
+      {rows.map((n, i) => (
+        <fieldset key={i} className="admin-choice">
+          <legend>Row {i + 1}</legend>
+          {([1, 2, 3] as const).map((choice) => (
+            <label key={choice}>
+              <input type="radio" name={`home-row-${i}`} checked={n === choice} onChange={(): void => onChange(rows.map((r, j) => (j === i ? choice : r)))} />
+              {choice}
+            </label>
+          ))}
+          <button type="button" className="link" disabled={rows.length === 1} onClick={(): void => onChange(rows.filter((_, j) => j !== i))} aria-label={`Remove row ${i + 1}`}>
+            Remove
+          </button>
+        </fieldset>
+      ))}
+      <div className="admin-row">
+        <button type="button" className="btn" disabled={rows.length >= MAX_HOME_ROWS} onClick={(): void => onChange([...rows, last])}>+ Add row</button>
+      </div>
+      <p className="admin-help">Galleries after row {rows.length} use {last} per row.</p>
+    </fieldset>
+  );
 }
 
 function SiteForm({ lang, onChanged }: AdminPagesProps): ReactElement {
@@ -49,7 +80,7 @@ function SiteForm({ lang, onChanged }: AdminPagesProps): ReactElement {
       setFields({
         title: textIn(site.data, 'title', site.data.title, lang),
         tagline: textIn(site.data, 'tagline', site.data.tagline, lang),
-        homeColumns: site.data.homeColumns,
+        homeRows: site.data.homeRows,
       });
     }
   }, [site.data, lang]);
@@ -58,7 +89,7 @@ function SiteForm({ lang, onChanged }: AdminPagesProps): ReactElement {
     e.preventDefault();
     setError(null);
     setMessage(null);
-    contentApi.updateSite(f.title, f.tagline, f.homeColumns, lang.code).then(
+    contentApi.updateSite(f.title, f.tagline, f.homeRows, lang.code).then(
       (saved) => {
         site.set(saved);
         setMessage('Site settings saved');
@@ -80,15 +111,7 @@ function SiteForm({ lang, onChanged }: AdminPagesProps): ReactElement {
         <form className="admin-form" onSubmit={(e): void => save(e, fields)}>
           <label>Title<input value={fields.title} required={lang.isDefault} maxLength={60} placeholder={hint(site.data?.title)} {...inputLang(lang)} onChange={(e): void => setFields({ ...fields, title: e.target.value })} /></label>
           <label>Tagline (optional)<input value={fields.tagline} maxLength={120} placeholder={hint(site.data?.tagline)} {...inputLang(lang)} onChange={(e): void => setFields({ ...fields, tagline: e.target.value })} /></label>
-          <fieldset className="admin-choice">
-            <legend>Galleries per row on the home page</legend>
-            {([1, 2, 3] as const).map((n) => (
-              <label key={n}>
-                <input type="radio" name="homeColumns" checked={fields.homeColumns === n} onChange={(): void => setFields({ ...fields, homeColumns: n })} />
-                {n}
-              </label>
-            ))}
-          </fieldset>
+          <HomeRows rows={fields.homeRows} onChange={(homeRows): void => setFields({ ...fields, homeRows })} />
           <div className="admin-row">
             <button className="btn" type="submit">Save site settings</button>
           </div>

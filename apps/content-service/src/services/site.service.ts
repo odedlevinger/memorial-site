@@ -9,7 +9,7 @@ import { requireText, setText, textOf, translationsOf } from './translations.js'
 const ROW_ID = 1;
 
 /** Shown until an editor first saves the site settings. */
-export const DEFAULT_SITE: Readonly<Pick<SiteView, 'title' | 'tagline' | 'homeColumns'>> = { title: 'Memory', tagline: 'a life in photographs', homeColumns: 3 };
+export const DEFAULT_SITE: Readonly<Pick<SiteView, 'title' | 'tagline' | 'homeRows'>> = { title: 'Memory', tagline: 'a life in photographs', homeRows: [3] };
 
 @Injectable()
 export class SiteService {
@@ -25,25 +25,25 @@ export class SiteService {
     return {
       title: textOf(row, 'title', lang),
       tagline: textOf(row, 'tagline', lang),
-      homeColumns: row.homeColumns,
+      homeRows: row.homeRows ?? DEFAULT_SITE.homeRows,
       updatedAt: row.updatedAt.toISOString(),
       ...(admin ? { translations: translationsOf(row) } : {}),
     };
   }
 
   /**
-   * Saves the title and tagline in `lang`, and the home page's galleries per row when given.
+   * Saves the title and tagline in `lang`, and the home page's row layout when given.
    * In another language an empty tagline falls back to the default language's tagline.
    */
-  async update(title: string, tagline: string, homeColumns: GridColumns | undefined, actor: Caller, lang: LangContext): Promise<SiteView> {
+  async update(title: string, tagline: string, homeRows: readonly GridColumns[] | undefined, actor: Caller, lang: LangContext): Promise<SiteView> {
     requireText(title, 'title', lang);
-    const row = (await this.site.findOneBy({ id: ROW_ID })) ?? this.site.create({ id: ROW_ID, ...DEFAULT_SITE, translations: null });
+    const row = (await this.site.findOneBy({ id: ROW_ID })) ?? this.site.create({ id: ROW_ID, ...DEFAULT_SITE, homeRows: null, translations: null });
     setText(row, 'title', title.trim(), lang);
     setText(row, 'tagline', tagline.trim(), lang);
-    if (homeColumns !== undefined) row.homeColumns = homeColumns;
+    if (homeRows !== undefined) row.homeRows = [...homeRows];
     row.updatedBy = actor.email;
     await this.site.save(row);
-    await this.audit.record(actor, 'site.update', null, { title: title.trim(), tagline: tagline.trim(), homeColumns: row.homeColumns, lang: lang.code });
+    await this.audit.record(actor, 'site.update', null, { title: title.trim(), tagline: tagline.trim(), homeRows: row.homeRows, lang: lang.code });
     return this.get(lang, true);
   }
 }

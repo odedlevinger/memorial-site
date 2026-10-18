@@ -26,11 +26,11 @@ export class SiteController {
   }
 
   @Put()
-  @ApiOperation({ summary: 'Change the site title and tagline in one language, and the home page’s galleries per row' })
+  @ApiOperation({ summary: 'Change the site title and tagline in one language, and the galleries in each home page row' })
   @ApiQuery({ name: 'lang', required: false, description: 'language code; defaults to the default language' })
   @ApiResponse({ status: 200, description: 'Updated site settings' })
   @ApiResponse({ status: 400, description: 'Validation error / unknown language' })
   async update(@Body() dto: UpdateSiteDto, @CurrentCaller() caller: Caller, @Query('lang') lang?: string): Promise<SiteView> {
-    return this.site.update(dto.title, dto.tagline, dto.homeColumns, caller, await this.languages.context(lang, true));
+    return this.site.update(dto.title, dto.tagline, dto.homeRows, caller, await this.languages.context(lang, true));
   }
 }

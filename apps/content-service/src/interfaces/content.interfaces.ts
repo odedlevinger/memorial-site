@@ -119,8 +119,8 @@ export interface SiteView {
   readonly title: string;
   /** May be empty — the header then shows the title alone. */
   readonly tagline: string;
-  /** How many galleries the home page shows in one row (1–3). */
-  readonly homeColumns: GridColumns;
+  /** Galleries in each row of the home page, top to bottom; rows after the last use its number. */
+  readonly homeRows: readonly GridColumns[];
   /** null while the site still uses the built-in defaults. */
   readonly updatedAt: string | null;
   /** Back office only: every language's text, for editing translations. */

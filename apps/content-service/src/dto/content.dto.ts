@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsEmail,
   IsIn,
@@ -198,6 +199,9 @@ export class UpdatePageDto {
   body!: string;
 }
 
+/** More rows than any home page needs; keeps the stored list small. */
+export const MAX_HOME_ROWS = 50;
+
 export class UpdateSiteDto {
   @ApiProperty({ maxLength: 60, description: 'required in the default language; empty in another removes its translation' })
   @IsString()
@@ -209,10 +213,19 @@ export class UpdateSiteDto {
   @MaxLength(120)
   tagline!: string;
 
-  @ApiPropertyOptional({ enum: GRID_COLUMNS, description: 'how many galleries the home page shows in one row; unchanged when left out' })
-  @ValidateIf((_, v) => v !== undefined) // null is not a row width
-  @IsIn(GRID_COLUMNS)
-  homeColumns?: GridColumns;
+  @ApiPropertyOptional({
+    type: [Number],
+    enum: GRID_COLUMNS,
+    maxItems: MAX_HOME_ROWS,
+    description: 'galleries in each home page row, top to bottom; rows after the last use its number; unchanged when left out',
+    example: [1, 3, 2],
+  })
+  @ValidateIf((_, v) => v !== undefined) // null is not a layout
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_HOME_ROWS)
+  @IsIn(GRID_COLUMNS, { each: true })
+  homeRows?: GridColumns[];
 }
 
 const LANG_CODE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8}){0,2}$/;
