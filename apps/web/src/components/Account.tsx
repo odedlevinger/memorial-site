@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { Login } from '../Login';
 import { validateSession, logout, type AuthUser } from '../api';
+import type { Role } from '../content';
 import { useI18n } from '../i18n';
+import { hrefFor } from '../route';
 
 type State =
   | { readonly status: 'loading' }
@@ -10,12 +12,14 @@ type State =
   | { readonly status: 'authed'; readonly user: AuthUser };
 
 interface AccountProps {
+  /** Owners and editors get the way into the back office here — the public menu has none. */
+  readonly role?: Role;
   /** Called after sign-in / sign-out so the app can re-check the back-office role. */
   readonly onSessionChange?: () => void;
 }
 
 /** Google sign-in wired to the auth-service through the Kong gateway. */
-export function Account({ onSessionChange }: AccountProps): ReactElement {
+export function Account({ role = 'viewer', onSessionChange }: AccountProps): ReactElement {
   const [state, setState] = useState<State>({ status: 'loading' });
   const { t } = useI18n();
 
@@ -45,6 +49,7 @@ export function Account({ onSessionChange }: AccountProps): ReactElement {
       <article className="prose-page account">
         <h1 className="page-title">{t('account.title')}</h1>
         <p>{t('account.signedInAs')} <strong dir="ltr">{state.user.email}</strong></p>
+        {role !== 'viewer' && <a className="btn" href={hrefFor({ page: 'admin' })}>{t('nav.admin')}</a>}
         <button className="btn" onClick={onLogout}>{t('account.signOut')}</button>
       </article>
     );

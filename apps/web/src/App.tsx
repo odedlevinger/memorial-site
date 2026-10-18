@@ -111,7 +111,7 @@ function renderPage(route: Route, topics: readonly Topic[], role: Role, refresh:
     case 'contact':
       return <Contact />;
     case 'account':
-      return <Account onSessionChange={refresh} />;
+      return <Account role={role} onSessionChange={refresh} />;
     case 'admin':
     case 'admin-topic':
     case 'admin-editors':

@@ -49,7 +49,9 @@ function SitePage({ slug, title }: { readonly slug: PageSlug; readonly title: st
       ) : page === 'failed' ? (
         <p className="empty">{t('page.loadFailed')}</p>
       ) : (
-        <PageText body={page.body} />
+        <div className="prose-body">
+          <PageText body={page.body} />
+        </div>
       )}
     </article>
   );
