@@ -220,8 +220,10 @@ body {
   transition: transform 0.2s ease;
 }
 
-.nav-chevron:dir(rtl) {
-  transform: rotate(-135deg);
+/* The panel opens to the right in every language, so the › sits right of the word and
+   points right there too. */
+.nav-group:dir(rtl) {
+  flex-direction: row-reverse;
 }
 
 .nav-sub[hidden] {
