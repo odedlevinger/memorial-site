@@ -1,0 +1,11 @@
+# Cloudflare Worker that serves the web frontend on lavilipshitz.co.il.
+# Deploy: cd infra/cloudflare && npx wrangler@4 login && npx wrangler@4 deploy
+name = "memorial-site-domain"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+routes = [
+  { pattern = "lavilipshitz.co.il/*", zone_name = "lavilipshitz.co.il" },
+  { pattern = "www.lavilipshitz.co.il/*", zone_name = "lavilipshitz.co.il" },
+]
