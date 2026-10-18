@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { contentApi, DEFAULT_SITE, type GridColumns, type Language, type Role, type SiteInfo, type Topic } from './content';
 import { BUILT_IN_LANGUAGE, I18nProvider, makeI18n, storedLanguage, storeLanguage, useI18n } from './i18n';
 import { useRoute, type Route } from './route';
+import { setFavicon } from './favicon';
 import { Header } from './components/Header';
 import { Home } from './components/Home';
 import { GalleryPage } from './components/GalleryPage';
@@ -61,7 +62,9 @@ export default function App(): ReactElement {
   }, [version, lang]);
 
   useEffect(() => {
-    if (site) document.title = site.title;
+    if (!site) return;
+    document.title = site.title;
+    setFavicon(site.title);
   }, [site]);
 
   useEffect(() => {
