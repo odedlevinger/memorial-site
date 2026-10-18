@@ -44,8 +44,8 @@ describe('public site', () => {
     render(<App />);
     const home = await screen.findByRole('region', { name: 'Galleries' });
     const classes = (): string[] => [...home.querySelectorAll('li')].map((li) => li.className);
-    // row 1: one gallery; rows after: three each (the last row's number repeats)
-    await waitFor(() => expect(classes()).toEqual(['per-row-1', 'per-row-3', 'per-row-3', 'per-row-3', 'per-row-3', 'per-row-3', 'per-row-3']));
+    // row 1: one gallery, centred; rows after: three each (the last row's number repeats)
+    await waitFor(() => expect(classes()).toEqual(['at-3', 'at-1', 'at-3', 'at-5', 'at-1', 'at-3', 'at-5']));
   });
 
   it('shows an empty state and Sign in for visitors when nothing is published', async () => {
