@@ -17,6 +17,8 @@ import {
 import { CONTENT_STATUSES, type ContentStatus, type Direction, DIRECTIONS, TOPIC_KINDS, type TopicKind } from '../interfaces/content.interfaces.js';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/** A YouTube page or short link (the web client turns it into a privacy-enhanced embed). */
+export const YOUTUBE_URL = /^https:\/\/(?:(?:www\.|m\.)?youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)[\w-]{6,}/;
 
 export class CreateTopicDto {
   @ApiProperty({ maxLength: 120 })
@@ -68,7 +70,7 @@ export class UpdateTopicDto {
   @IsIn(TOPIC_KINDS)
   kind?: TopicKind;
 
-  @ApiPropertyOptional({ maxLength: 20000, nullable: true, description: 'text / book pages; see TopicDetailView.body for the markup' })
+  @ApiPropertyOptional({ maxLength: 20000, nullable: true, description: 'text / book / movie pages; see TopicDetailView.body for the markup' })
   @IsOptional()
   @ValidateIf((_, v) => v !== null)
   @IsString()
@@ -95,6 +97,13 @@ export class UpdateTopicDto {
   @IsString()
   @MaxLength(60)
   buyLabel?: string | null;
+
+  @ApiPropertyOptional({ maxLength: 500, nullable: true, description: 'movie pages: a YouTube link', example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @Matches(YOUTUBE_URL, { message: 'videoUrl must be a YouTube link (youtube.com/watch?v=…, youtu.be/…, or a shorts / embed / live link)' })
+  @MaxLength(500)
+  videoUrl?: string | null;
 
   @ApiPropertyOptional({ nullable: true, description: 'id of one of this topic’s pictures' })
   @IsOptional()

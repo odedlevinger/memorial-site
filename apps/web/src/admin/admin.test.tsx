@@ -310,6 +310,26 @@ describe('text and book topics', () => {
     expect(t).toMatchObject({ details: 'Pages: 288', buyUrl: null, buyLabel: 'Order' });
   });
 
+  it('edits a movie: YouTube link (checked as you type) and optional text', async () => {
+    const t = server.addTopic('Home movie', 'draft', 0, 'movie');
+    await openAdmin(`#/admin/topics/${t.id}`);
+    const link = await screen.findByLabelText('YouTube link');
+    expect(screen.queryByLabelText('Book details')).toBeNull();
+    fireEvent.change(link, { target: { value: 'https://vimeo.com/1' } });
+    expect(screen.getByText('That doesn’t look like a YouTube link.')).toBeTruthy();
+    fireEvent.change(link, { target: { value: ' https://youtu.be/dQw4w9WgXcQ ' } });
+    expect(screen.queryByText('That doesn’t look like a YouTube link.')).toBeNull();
+    fireEvent.change(screen.getByLabelText('Text about the movie (optional)'), { target: { value: 'Filmed in Haifa.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save topic' }));
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Saved');
+    expect(t).toMatchObject({ videoUrl: 'https://youtu.be/dQw4w9WgXcQ', body: 'Filmed in Haifa.' });
+    expect((screen.getByLabelText('YouTube link') as HTMLInputElement).value).toBe('https://youtu.be/dQw4w9WgXcQ');
+
+    fireEvent.change(screen.getByLabelText('YouTube link'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save topic' }));
+    await waitFor(() => expect(t.videoUrl).toBeNull());
+  });
+
   it('shows the book placeholders for an untranslated, empty book', async () => {
     server.addLanguage('he', 'עברית', 'rtl');
     const t = server.addTopic('Bare', 'draft', 0, 'book');

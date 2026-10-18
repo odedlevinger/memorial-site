@@ -209,7 +209,7 @@ describe('topics', () => {
   });
 });
 
-describe('page kinds (text / book)', () => {
+describe('page kinds (text / book / movie)', () => {
   beforeEach(async () => {
     await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);
   });
@@ -262,6 +262,39 @@ describe('page kinds (text / book)', () => {
     const cleared = await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ buyUrl: null, kind: 'pictures' }).expect(200);
     expect(cleared.body).toMatchObject({ kind: 'pictures', buyUrl: null });
     await http().get('/content/public/topics/the-book').expect(404); // a picture set with no pictures
+  });
+
+  it('stores a movie’s YouTube link and optional description', async () => {
+    const movie = await http().post('/content/topics').set(as(EDITOR)).send({ title: 'Home movie', kind: 'movie' }).expect(201);
+    const id = movie.body.id as string;
+    expect(movie.body).toMatchObject({ kind: 'movie', videoUrl: null, cover: null });
+    for (const bad of ['https://vimeo.com/123456', 'http://youtu.be/dQw4w9WgXcQ', 'https://youtube.com/', 'https://evil.example/?https://youtu.be/dQw4w9WgXcQ']) {
+      await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ videoUrl: bad }).expect(400);
+    }
+    for (const good of [
+      'https://youtu.be/dQw4w9WgXcQ',
+      'https://m.youtube.com/watch?feature=share&v=dQw4w9WgXcQ',
+      'https://www.youtube.com/shorts/dQw4w9WgXcQ',
+    ]) {
+      await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ videoUrl: good }).expect(200);
+    }
+    await http()
+      .patch(`/content/topics/${id}`)
+      .set(as(EDITOR))
+      .send({ videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', body: 'Summer 1974, Haifa.', status: 'published' })
+      .expect(200);
+    const [listed] = (await http().get('/content/public/topics').expect(200)).body as Array<{ cover: unknown }>;
+    expect(listed!.cover).toEqual({
+      display: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+      thumb: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+    });
+    const page = await http().get('/content/public/topics/home-movie').expect(200);
+    expect(page.body).toMatchObject({ kind: 'movie', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', body: 'Summer 1974, Haifa.' });
+    const cleared = await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ videoUrl: null }).expect(200);
+    expect(cleared.body).toMatchObject({ videoUrl: null, cover: null });
+    // a text page with a link left over shows no video cover
+    await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ videoUrl: 'https://youtu.be/dQw4w9WgXcQ', kind: 'text' }).expect(200);
+    expect((await http().get('/content/public/topics').expect(200)).body[0].cover).toBeNull();
   });
 });
 

@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 import type { TopicKind } from '../content';
 
 /** What each kind of topic page is called in the back office. */
-export const KIND_NAMES: Readonly<Record<TopicKind, string>> = { pictures: 'Picture set', text: 'Text', book: 'Book' };
+export const KIND_NAMES: Readonly<Record<TopicKind, string>> = { pictures: 'Picture set', text: 'Text', book: 'Book', movie: 'Movie' };
 
 interface KindSelectProps {
   readonly value: TopicKind;

@@ -16,11 +16,11 @@ export class TopicEntity {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
-  /** How the page is shown: a picture set, an illustrated text, or a book. */
+  /** How the page is shown: a picture set, an illustrated text, a book, or a YouTube movie. */
   @Column({ type: 'varchar', length: 16, default: 'pictures' })
   kind!: TopicKind;
 
-  /** Text and book pages: the page's text (light markup, see TopicDetailView.body). */
+  /** Text, book and movie pages: the page's text (light markup, see TopicDetailView.body). */
   @Column({ type: 'text', nullable: true })
   body!: string | null;
 
@@ -35,6 +35,10 @@ export class TopicEntity {
   /** Book pages: the buy button's text (the site's own label when empty). */
   @Column({ type: 'varchar', length: 60, nullable: true })
   buyLabel!: string | null;
+
+  /** Movie pages: the YouTube link. Shared by all languages. */
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  videoUrl!: string | null;
 
   @Column({ type: 'uuid', nullable: true })
   coverPictureId!: string | null;

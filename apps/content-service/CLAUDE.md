@@ -33,7 +33,8 @@ src/
 - **Images**: always go through `ImagesService.store` — it validates type/size and
   re-encodes every derivative (drops EXIF/GPS). Never store an upload as-is.
 - **Page kinds**: a topic is a `pictures` set, a `text` page (body with `## heading`, `> quote`,
-  `[photo <id> left|right]` lines) or a `book` (body + `details` + `buyUrl`/`buyLabel`).
+  `[photo <id> left|right]` lines) or a `book` (body + `details` + `buyUrl`/`buyLabel`) or a
+  `movie` (`videoUrl`, a YouTube link, + optional body).
 - **Public filtering**: only `published` topics are public; a `pictures` topic also needs ≥ 1
   `published` picture. Only published pictures are ever served publicly.
 - Every write calls `AuditService.record`.

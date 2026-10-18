@@ -19,8 +19,8 @@ export interface Picture {
 export interface Topic {
   readonly id: string;
   readonly slug: string;
-  /** Only picture sets are shown in the app; text and book pages live on the website. */
-  readonly kind?: 'pictures' | 'text' | 'book';
+  /** Only picture sets are shown in the app; text, book and movie pages live on the website. */
+  readonly kind?: 'pictures' | 'text' | 'book' | 'movie';
   readonly title: string;
   readonly description: string | null;
   readonly cover: PictureImages | null;

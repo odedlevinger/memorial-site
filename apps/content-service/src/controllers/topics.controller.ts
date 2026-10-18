@@ -44,7 +44,7 @@ export class TopicsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create a topic — a picture set, text or book page (starts as draft, added last)' })
+  @ApiOperation({ summary: 'Create a topic — a picture set, text, book or movie page (starts as draft, added last)' })
   @ApiResponse({ status: 201, description: 'Created topic' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   async create(@Body() dto: CreateTopicDto, @CurrentCaller() caller: Caller, @Query('lang') lang?: string): Promise<TopicDetailView> {
@@ -52,7 +52,7 @@ export class TopicsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Edit title, slug, description, page kind, text, book details, cover or publish status' })
+  @ApiOperation({ summary: 'Edit title, slug, description, page kind, text, book details, movie link, cover or publish status' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Updated topic' })
   @ApiResponse({ status: 400, description: 'Validation error / cover not in topic / unknown language' })

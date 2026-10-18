@@ -287,6 +287,32 @@ describe('text and book pages', () => {
   });
 });
 
+describe('movie pages', () => {
+  it('embeds the YouTube movie with its introduction and text', async () => {
+    const t = server.addTopic('Home movie', 'published', 0, 'movie');
+    Object.assign(t, { description: 'Super 8, 1974', body: 'Filmed in Haifa.', videoUrl: 'https://youtu.be/dQw4w9WgXcQ?si=x' });
+    window.location.hash = '#/galleries/home-movie';
+    render(<App />);
+    const player = (await screen.findByTitle('Home movie')) as HTMLIFrameElement;
+    expect(player.src).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0');
+    expect(screen.getByText('Super 8, 1974')).toBeTruthy();
+    expect(screen.getByText('Filmed in Haifa.')).toBeTruthy();
+  });
+
+  it('shows no player without a usable link', async () => {
+    server.addTopic('No link', 'published', 0, 'movie');
+    const bad = server.addTopic('Bad link', 'published', 0, 'movie');
+    bad.videoUrl = 'https://www.youtube.com/';
+    window.location.hash = '#/galleries/no-link';
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'No link' })).toBeTruthy();
+    expect(document.querySelector('iframe, .rich-text, .text-topic-intro')).toBeNull();
+    go('#/galleries/bad-link');
+    expect(await screen.findByRole('heading', { name: 'Bad link' })).toBeTruthy();
+    expect(document.querySelector('iframe')).toBeNull();
+  });
+});
+
 describe('site title', () => {
   it('shows the saved title and falls back to the default when it cannot load', async () => {
     server.site = { title: 'Lavi', tagline: '1940–2025', updatedAt: null, translations: {} };

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactElement } from 'react';
 import { contentApi, type ContentStatus, type Language, type Picture, type TopicDetail, type TopicKind } from '../content';
+import { youtubeId } from '../components/GalleryPage';
 import { photoRef } from '../components/RichText';
 import { hrefFor } from '../route';
 import { KindSelect } from './KindSelect';
@@ -25,6 +26,7 @@ interface Fields {
   details: string;
   buyUrl: string;
   buyLabel: string;
+  videoUrl: string;
   status: ContentStatus;
 }
 
@@ -37,6 +39,7 @@ const fieldsOf = (t: TopicDetail, lang: Language): Fields => ({
   details: textIn(t, 'details', t.details, lang),
   buyUrl: t.buyUrl ?? '',
   buyLabel: textIn(t, 'buyLabel', t.buyLabel, lang),
+  videoUrl: t.videoUrl ?? '',
   status: t.status,
 });
 
@@ -96,6 +99,7 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
           description: fields.description || null,
           ...(fields.kind !== 'pictures' ? { body: orNull(fields.body) } : {}),
           ...(book ? { details: orNull(fields.details), buyUrl: fields.buyUrl.trim() || null, buyLabel: orNull(fields.buyLabel) } : {}),
+          ...(fields.kind === 'movie' ? { videoUrl: fields.videoUrl.trim() || null } : {}),
           status: fields.status,
         },
         lang.code,
@@ -150,9 +154,15 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
         <label>Web address<input value={fields.slug} maxLength={140} required pattern="[a-z0-9]+(-[a-z0-9]+)*" onChange={(e): void => set('slug', e.target.value)} /></label>
         <label>Page kind<KindSelect value={fields.kind} onChange={(k): void => set('kind', k)} /></label>
         <label>{hasText ? 'Introduction' : 'Description'}<textarea value={fields.description} maxLength={2000} rows={3} placeholder={hint(t.description)} {...inputLang(lang)} onChange={(e): void => set('description', e.target.value)} /></label>
+        {fields.kind === 'movie' && (
+          <>
+            <label>YouTube link<input type="url" value={fields.videoUrl} maxLength={500} placeholder="https://www.youtube.com/watch?v=…" onChange={(e): void => set('videoUrl', e.target.value)} /></label>
+            {fields.videoUrl.trim() && !youtubeId(fields.videoUrl) && <p className="admin-help error">That doesn’t look like a YouTube link.</p>}
+          </>
+        )}
         {hasText && (
           <>
-            <label>{fields.kind === 'book' ? 'About the book' : 'Text'}
+            <label>{fields.kind === 'book' ? 'About the book' : fields.kind === 'movie' ? 'Text about the movie (optional)' : 'Text'}
               <textarea ref={bodyBox} className="body-editor" value={fields.body} maxLength={20000} rows={16} placeholder={hint(t.body)} {...inputLang(lang)} onChange={(e): void => set('body', e.target.value)} />
             </label>
             <p className="admin-help">

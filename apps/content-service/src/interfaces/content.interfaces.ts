@@ -3,9 +3,9 @@
 export type ContentStatus = 'draft' | 'published';
 export const CONTENT_STATUSES: readonly ContentStatus[] = ['draft', 'published'];
 
-/** How a topic's page is shown: a picture set, an illustrated text, or a book. */
-export type TopicKind = 'pictures' | 'text' | 'book';
-export const TOPIC_KINDS: readonly TopicKind[] = ['pictures', 'text', 'book'];
+/** How a topic's page is shown: a picture set, an illustrated text, a book, or a YouTube movie. */
+export type TopicKind = 'pictures' | 'text' | 'book' | 'movie';
+export const TOPIC_KINDS: readonly TopicKind[] = ['pictures', 'text', 'book', 'movie'];
 
 export type Role = 'owner' | 'editor' | 'viewer';
 
@@ -55,7 +55,7 @@ export interface TopicView {
 export interface TopicDetailView extends TopicView {
   readonly pictures: readonly PictureView[];
   /**
-   * Text and book pages: plain text, paragraphs separated by blank lines. A line may be
+   * Text, book and movie pages: plain text, paragraphs separated by blank lines. A line may be
    * `## heading`, `> quote`, or `[photo <id> …]` — one or more of the topic's pictures (by
    * id or its first 8 characters), optionally followed by `left` / `right`.
    */
@@ -64,6 +64,8 @@ export interface TopicDetailView extends TopicView {
   readonly details: string | null;
   readonly buyUrl: string | null;
   readonly buyLabel: string | null;
+  /** Movie pages: the YouTube link (watch, youtu.be, shorts or embed). */
+  readonly videoUrl: string | null;
 }
 
 /** Who is calling, as resolved from Kong's X-User-Id. */
