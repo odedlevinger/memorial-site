@@ -33,6 +33,7 @@ describe('public site', () => {
     server.addTopic('Hidden', 'draft');
     render(<App />);
     const nav = await screen.findByRole('navigation', { name: 'Main' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Galleries' }));
     expect(within(nav).getByRole('link', { name: 'Streets' })).toBeTruthy();
     expect(within(nav).queryByRole('link', { name: 'Hidden' })).toBeNull();
     expect(await within(nav).findByRole('link', { name: 'Account' })).toBeTruthy();
@@ -52,6 +53,7 @@ describe('public site', () => {
     server.failNext(/GET \/api\/content\/public\/topics$/, 503);
     render(<App />);
     const nav = await screen.findByRole('navigation', { name: 'Main' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Galleries' }));
     expect(await within(nav).findByRole('link', { name: 'Streets' })).toBeTruthy();
   });
 
@@ -271,7 +273,7 @@ describe('languages', () => {
     for (let i = 0; i < publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/languages$/, 503);
     render(<App />);
     const nav = await screen.findByRole('navigation', { name: 'Main' });
-    expect(within(nav).getByRole('link', { name: 'Galleries' })).toBeTruthy();
+    expect(within(nav).getByRole('button', { name: 'Galleries' })).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'Language' })).toBeNull();
   });
 
@@ -291,8 +293,8 @@ describe('languages', () => {
     expect(within(switcher).queryByRole('button', { name: 'English' })).toBeNull(); // lists the others
     fireEvent.click(within(switcher).getByRole('button', { name: 'עברית' }));
     const nav = await screen.findByRole('navigation', { name: 'ראשי' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'גלריות' }));
     expect(await within(nav).findByRole('link', { name: 'רחובות' })).toBeTruthy();
-    expect(within(nav).getByRole('link', { name: 'גלריות' })).toBeTruthy();
     expect(await screen.findByRole('link', { name: 'זיכרון' })).toBeTruthy();
     expect(document.documentElement).toMatchObject({ dir: 'rtl', lang: 'he' });
     expect(server.urls).toContain('GET /api/content/public/topics?lang=he');

@@ -14,18 +14,24 @@ interface HeaderProps {
 
 /**
  * A brown bar: ☰ Menu top left, the site title in the middle, the language flag top right —
- * in every language. The menu drops down from under the bar. The back office is reached from
+ * in every language. The menu drops down from under the bar; its Galleries entry folds the
+ * gallery list out into a golden panel beside it (beneath it on a phone), as on
+ * vivianmaier.com. The back office is reached from
  * the Account page, not the menu.
  */
 export function Header({ site, topics, role }: HeaderProps): ReactElement {
   const { current, t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
-  const close = (): void => setMenuOpen(false);
+  const [galleriesOpen, setGalleriesOpen] = useState(false);
+  const close = (): void => {
+    setMenuOpen(false);
+    setGalleriesOpen(false);
+  };
 
   useEffect(() => {
     if (!menuOpen) return;
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setMenuOpen(false);
+      if (e.key === 'Escape') close();
     };
     window.addEventListener('keydown', onKey);
     return (): void => window.removeEventListener('keydown', onKey);
@@ -39,7 +45,7 @@ export function Header({ site, topics, role }: HeaderProps): ReactElement {
           aria-expanded={menuOpen}
           aria-controls="site-nav"
           aria-label={menuOpen ? t('nav.close') : t('nav.menu')}
-          onClick={(): void => setMenuOpen((open) => !open)}
+          onClick={(): void => (menuOpen ? close() : setMenuOpen(true))}
         >
           <span className="hamburger" aria-hidden="true" />
           <span className="menu-label" aria-hidden="true">{t('nav.menu')}</span>
@@ -52,8 +58,17 @@ export function Header({ site, topics, role }: HeaderProps): ReactElement {
       </div>
       {menuOpen && <div className="nav-backdrop" onClick={close} aria-hidden="true" />}
       <nav id="site-nav" className={menuOpen ? 'site-nav open' : 'site-nav'} aria-label={t('nav.main')}>
-        <a href={hrefFor({ page: 'home' })} onClick={close}>{t('nav.galleries')}</a>
-        <ul className="nav-sub">
+        <button
+          type="button"
+          className={galleriesOpen ? 'nav-group open' : 'nav-group'}
+          aria-expanded={galleriesOpen}
+          aria-controls="nav-galleries"
+          onClick={(): void => setGalleriesOpen((open) => !open)}
+        >
+          {t('nav.galleries')}
+          <span className="nav-chevron" aria-hidden="true" />
+        </button>
+        <ul id="nav-galleries" className="nav-sub" hidden={!galleriesOpen}>
           {topics.map((topic) => (
             <li key={topic.id}>
               <a href={hrefFor({ page: 'gallery', slug: topic.slug })} onClick={close}>{topic.title}</a>

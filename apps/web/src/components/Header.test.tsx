@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { DEFAULT_SITE, type Language } from '../content';
+import { DEFAULT_SITE, type Language, type Topic } from '../content';
 import { I18nProvider, makeI18n } from '../i18n';
 import { Header } from './Header';
 
@@ -14,6 +14,27 @@ describe('Header', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
     fireEvent.click(screen.getByText('Memory'));
     expect(screen.getByRole('button', { name: 'Menu' }).getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('folds the gallery list open and shut under Galleries', () => {
+    const topic: Topic = {
+      id: 't1', slug: 'childhood', title: 'Childhood', description: null, position: 0,
+      status: 'published', coverPictureId: null, cover: null, pictureCount: 0,
+    };
+    render(<Header site={DEFAULT_SITE} topics={[topic]} role="viewer" />);
+    const galleries = screen.getByRole('button', { name: 'Galleries' });
+    expect(galleries.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('link', { name: 'Childhood' })).toBeNull();
+    fireEvent.click(galleries);
+    expect(galleries.className).toBe('nav-group open');
+    expect(screen.getByRole('link', { name: 'Childhood' }).getAttribute('href')).toBe('#/galleries/childhood');
+    fireEvent.click(galleries);
+    expect(galleries.getAttribute('aria-expanded')).toBe('false');
+    // Closing the menu folds the list away too, so it reopens folded.
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    fireEvent.click(galleries);
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(galleries.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('closes the menu with Escape or a click outside it', () => {
