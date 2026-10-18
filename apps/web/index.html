@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Memory</title>
+    <!-- Link previews (WhatsApp, Facebook…) don't run JavaScript, so nginx's SSI fills in the
+         site's title, tagline and share picture from content-service (nginx.conf.template).
+         If that fails, or under `vite dev`, the bare <title> below is used instead. -->
+    <!--# block name="no-share-meta" --><title></title><!--# endblock -->
+    <!--# include virtual="/share-meta" stub="no-share-meta" -->
     <!-- Google Identity Services (renders the Sign in with Google button) -->
     <script src="https://accounts.google.com/gsi/client" async></script>
   </head>

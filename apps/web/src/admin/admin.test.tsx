@@ -464,6 +464,32 @@ describe('pages', () => {
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'title must not be empty');
   });
 
+  it('uploads, replaces and removes the link preview picture', async () => {
+    await openAdmin('#/admin/pages');
+    const group = await screen.findByRole('group', { name: 'Link preview picture' });
+    expect(within(group).getByText('No picture yet — previews show the title and tagline only.')).toBeTruthy();
+    const input = within(group).getByLabelText('Upload link preview picture');
+    fireEvent.change(input, { target: { files: [] } });
+    fireEvent.change(input, { target: { files: [jpg('share.jpg')] } });
+    expect(await within(group).findByRole('status')).toHaveProperty('textContent', 'Link preview picture saved');
+    const first = server.site.shareImage;
+    expect(within(group).getByRole('img', { name: 'Link preview picture' }).getAttribute('src')).toBe(first);
+    expect(within(group).getByText('Replace picture')).toBeTruthy();
+
+    fireEvent.change(input, { target: { files: [jpg('other.jpg')] } });
+    await waitFor(() => expect(within(group).getByRole('img', { name: 'Link preview picture' }).getAttribute('src')).not.toBe(first));
+
+    server.failNext(/PUT \/api\/content\/site\/share-image$/, 400, { message: 'Only JPEG, PNG and WebP images are accepted' });
+    fireEvent.change(input, { target: { files: [jpg('bad.jpg')] } });
+    expect(await within(group).findByRole('alert')).toHaveProperty('textContent', 'Only JPEG, PNG and WebP images are accepted');
+
+    fireEvent.click(within(group).getByRole('button', { name: 'Remove picture' }));
+    expect(await within(group).findByRole('status')).toHaveProperty('textContent', 'Link preview picture removed');
+    expect(server.site.shareImage).toBeNull();
+    expect(within(group).queryByRole('button', { name: 'Remove picture' })).toBeNull();
+    expect(server.calls).toContain('DELETE /api/content/site/share-image');
+  });
+
   it('shows a load error for a page it cannot fetch', async () => {
     server.failNext(/GET \/api\/content\/pages\/about$/, 503, { message: 'Unavailable' });
     await openAdmin('#/admin/pages');

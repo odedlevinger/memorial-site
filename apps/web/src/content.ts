@@ -90,12 +90,14 @@ export interface SiteInfo {
   readonly tagline: string;
   /** Galleries in each row of the home page, top to bottom; rows after the last use its number. */
   readonly homeRows: readonly GridColumns[];
+  /** URL of the picture shown when a link to the site is shared; null = none. */
+  readonly shareImage: string | null;
   readonly updatedAt: string | null;
   readonly translations?: Translations;
 }
 
 /** Used if the site settings cannot be loaded (matches content-service's defaults). */
-export const DEFAULT_SITE: SiteInfo = { title: 'Memory', tagline: 'a life in photographs', homeRows: [3], updatedAt: null };
+export const DEFAULT_SITE: SiteInfo = { title: 'Memory', tagline: 'a life in photographs', homeRows: [3], shareImage: null, updatedAt: null };
 
 /** Signed-in people on one day (site time zone). */
 export interface DailyCount {
@@ -218,6 +220,8 @@ export const contentApi = {
   updatePage: (slug: PageSlug, body: string, lang?: string): Promise<Page> => call(inLang(`/pages/${slug}`, lang), json('PUT', { body })),
   updateSite: (title: string, tagline: string, homeRows: readonly GridColumns[], lang?: string): Promise<SiteInfo> =>
     call(inLang('/site', lang), json('PUT', { title, tagline, homeRows })),
+  setShareImage: (f: File): Promise<SiteInfo> => call('/site/share-image', { method: 'PUT', body: file('file', f) }),
+  removeShareImage: (): Promise<SiteInfo> => call('/site/share-image', { method: 'DELETE' }),
 
   addLanguage: (language: Pick<Language, 'code' | 'name' | 'direction'>): Promise<Language[]> => call('/languages', json('POST', language)),
   updateLanguage: (code: string, patch: LanguagePatch): Promise<Language[]> =>

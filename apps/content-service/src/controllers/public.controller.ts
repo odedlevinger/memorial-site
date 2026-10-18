@@ -74,6 +74,15 @@ export class PublicController {
     return this.site.get(await this.languages.context(lang, false));
   }
 
+  @Get('public/share-meta')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  @Header('Cache-Control', 'public, max-age=60')
+  @ApiOperation({ summary: 'HTML <head> tags for link previews (title, tagline, share picture); the web server includes them in index.html' })
+  @ApiResponse({ status: 200, description: '<title> plus Open Graph / Twitter card <meta> tags' })
+  async getShareMeta(): Promise<string> {
+    return this.site.shareMeta(await this.languages.context(undefined, false));
+  }
+
   @Get('public/languages')
   @Header('Cache-Control', 'public, max-age=30')
   @ApiOperation({ summary: 'Languages the site is offered in (with label overrides), in switcher order' })
