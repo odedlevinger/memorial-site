@@ -227,13 +227,18 @@ describe('topic page', () => {
 });
 
 describe('editors', () => {
-  it('owner invites and removes editors', async () => {
+  it('owner sees themselves as owner (no Remove), invites and removes editors', async () => {
     await openAdmin('#/admin/editors');
     expect(await screen.findByText('No editors yet.')).toBeTruthy();
+    const ownerRow = screen.getByText('me@example.com').closest('li') as HTMLElement;
+    expect(within(ownerRow).getByText('Owner')).toBeTruthy();
+    expect(within(ownerRow).queryByRole('button')).toBeNull();
+
     fireEvent.change(screen.getByLabelText('Editor email'), { target: { value: ' cousin@gmail.com ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Invite editor' }));
     expect(await screen.findByText('cousin@gmail.com')).toBeTruthy();
     expect(screen.getByText('added by me@example.com')).toBeTruthy();
+    expect(screen.queryByText('No editors yet.')).toBeNull();
 
     confirmSpy.mockReturnValueOnce(false);
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
@@ -243,6 +248,33 @@ describe('editors', () => {
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Could not remove');
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
     expect(await screen.findByText('No editors yet.')).toBeTruthy();
+  });
+
+  it('owner hands ownership to an editor and loses the Editors tab', async () => {
+    server.editors = [{ email: 'cousin@gmail.com', role: 'editor', addedBy: 'me@example.com', createdAt: '2026-10-16T00:00:00Z' }];
+    await openAdmin('#/admin/editors');
+    await screen.findByText('cousin@gmail.com');
+
+    confirmSpy.mockReturnValueOnce(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Make owner' }));
+    expect(server.owner.email).toBe('me@example.com');
+
+    server.failNext(/PUT \/api\/content\/editors\/owner$/, 400, { message: 'Invite them as an editor first' });
+    fireEvent.click(screen.getByRole('button', { name: 'Make owner' }));
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Invite them as an editor first');
+    expect(screen.getByRole('link', { name: 'Editors' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Make owner' }));
+    expect(confirmSpy).toHaveBeenLastCalledWith(expect.stringContaining('Make cousin@gmail.com the owner?'));
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'Editors' })).toBeNull());
+    expect(server.owner).toMatchObject({ email: 'cousin@gmail.com', role: 'owner' });
+    expect(server.editors.map((e) => e.email)).toEqual(['me@example.com']);
+  });
+
+  it('shows who made the owner the owner', async () => {
+    server.owner = { email: 'me@example.com', role: 'owner', addedBy: 'old@example.com', createdAt: '2026-10-18T00:00:00Z' };
+    await openAdmin('#/admin/editors');
+    expect(await screen.findByText('made owner by old@example.com')).toBeTruthy();
   });
 });
 

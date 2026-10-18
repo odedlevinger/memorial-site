@@ -12,13 +12,16 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 |---|---|---|
 | Visitor | Anyone (no sign-in) | View **published** topics and pictures. |
 | Editor | Invited family member, signed in with Google | Everything in §3 (topics, pictures, captions, ordering, publish/hide). |
-| Owner | `oded.levinger@gmail.com` (configured, not editable in-app) | Everything an Editor can, **plus** invite and remove Editors. |
+| Owner | One account — initially `oded.levinger@gmail.com` (configured); can be handed to an Editor in-app | Everything an Editor can, **plus** invite and remove Editors and hand ownership to an Editor. |
 
 - Editors are identified by **email address**. An invitation is just an email on the editor
   list; it takes effect the next time that Google account signs in (no invitation email is
   sent in v1).
-- The Owner list comes from configuration (`OWNER_EMAILS`), so the owner can never lock
-  themselves out.
+- Until ownership is handed over in the back office, the Owner list comes from configuration
+  (`OWNER_EMAILS`). Handing over (owner only) picks an existing Editor — so a mistyped email
+  can never take ownership — stores them in `site_owner`, and keeps the previous owner on as
+  an Editor. The owner cannot be removed. Recovery: delete the `site_owner` row to fall back to
+  `OWNER_EMAILS`.
 - Signed-in users who are not Owner/Editor see the public site only.
 
 ## 2. Content model
@@ -76,7 +79,7 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 5. Reorder pictures by drag-and-drop; choose the topic's cover picture.
 6. Publish / hide a picture.
 7. Deleting a topic requires confirmation and deletes its pictures.
-8. Owner only: view, add and remove Editors (by email).
+8. Owner only: view the owner and Editors, add and remove Editors (by email), and make an Editor the owner.
 9. Edit the text of the About and Contact pages.
 10. Edit the site title and tagline.
 11. Add, rename and remove languages, set each one's text direction and labels, and choose

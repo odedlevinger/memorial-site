@@ -16,7 +16,7 @@ src/
 │                               roles · identity (auth-service lookup) · audit · seed
 ├── guards/roles.guard.ts       X-User-Id → Caller; @RequireRole('editor' | 'owner')
 ├── dto/content.dto.ts          class-validator DTOs (limits from SPEC §2)
-├── entities/                   topic · picture · editor · page · site · language · daily-sign-in · audit-log
+├── entities/                   topic · picture · editor · owner · page · site · language · daily-sign-in · audit-log
 ├── interfaces/                 contracts (views, Caller, ImageStore, IdentityLookup)
 └── testing/harness.ts          in-memory SQLite app + fakes (test-only, not covered)
 ```
@@ -26,7 +26,9 @@ src/
 - **Trust boundary**: the service is private on Cloud Run; only Kong calls it. Kong strips
   client-supplied `X-User-Id` and injects the session-verified one — never accept identity
   from anywhere else.
-- **Roles**: owner = `OWNER_EMAILS` (config); editor = `editors` table; else viewer.
+- **Roles**: owner = the `site_owner` row (set by `PUT /content/editors/owner`), else
+  `OWNER_EMAILS` (config); editor = `editors` table; else viewer. `GET /content/editors`
+  lists the owner(s) first; the owner can't be removed.
   Every write endpoint is guarded; public reads live only under `/content/public/*`.
 - **Images**: always go through `ImagesService.store` — it validates type/size and
   re-encodes every derivative (drops EXIF/GPS). Never store an upload as-is.

@@ -37,6 +37,7 @@ export class FakeServer {
   signedIn = true;
   topics: TopicRow[] = [];
   pictures: PictureRow[] = [];
+  owner: Editor = { email: 'me@example.com', role: 'owner', addedBy: null, createdAt: null };
   editors: Editor[] = [];
   site: SiteInfo & { translations: Tr } = { title: 'Memory', tagline: 'a life in photographs', updatedAt: null, translations: {} };
   pages: Record<string, Page & { translations: Tr }> = {
@@ -286,12 +287,21 @@ export class FakeServer {
 
   private editorsRoute(method: string, p: string, body: Record<string, unknown>): Response {
     if (this.role !== 'owner') return this.json({ message: 'Requires owner access' }, 403);
-    if (method === 'POST') this.editors.push({ email: String(body['email']), addedBy: 'me@example.com', createdAt: '2026-10-16T00:00:00Z' });
-    if (method === 'DELETE') {
+    if (method === 'PUT' && p === '/editors/owner') {
+      const email = String(body['email']);
+      this.editors = [
+        ...this.editors.filter((e) => e.email !== email),
+        { email: this.owner.email, role: 'editor', addedBy: 'me@example.com', createdAt: '2026-10-18T00:00:00Z' },
+      ];
+      this.owner = { email, role: 'owner', addedBy: 'me@example.com', createdAt: '2026-10-18T00:00:00Z' };
+      this.role = 'editor';
+    } else if (method === 'POST') {
+      this.editors.push({ email: String(body['email']), role: 'editor', addedBy: 'me@example.com', createdAt: '2026-10-16T00:00:00Z' });
+    } else if (method === 'DELETE') {
       const email = decodeURIComponent(p.slice('/editors/'.length));
       this.editors = this.editors.filter((e) => e.email !== email);
     }
-    return this.json(this.editors, method === 'POST' ? 201 : 200);
+    return this.json([this.owner, ...this.editors], method === 'POST' ? 201 : 200);
   }
 
   private topicRow(id: string): TopicRow | undefined {
