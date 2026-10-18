@@ -647,6 +647,14 @@ body {
   font-size: 0.95rem;
 }
 
+/* The menu sits at the left in every language, so in right-to-left ones its entries line up
+   on the left too, with the gallery panel beside them. */
+[dir='rtl'] .site-nav {
+  align-items: flex-end; /* the left edge, in a right-to-left column */
+  text-align: left;
+  padding-inline: 2rem;
+}
+
 /* The same for the other spaced-out labels; :dir() leaves the left-to-right back office alone. */
 .wordmark-sub:dir(rtl),
 .page-title:dir(rtl),
@@ -1070,6 +1078,11 @@ button.status {
 
   .nav-sub li a {
     color: var(--on-brown);
+  }
+
+  [dir='rtl'] .nav-sub {
+    align-items: flex-start;
+    text-align: left;
   }
 
   .nav-group.open .nav-chevron {
