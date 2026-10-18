@@ -12,26 +12,16 @@ interface HeaderProps {
   readonly role: Role;
 }
 
-/**
- * A brown bar: ☰ Menu top left, the site title in the middle, the language flag top right —
- * in every language. The menu drops down from under the bar; its Galleries entry folds the
- * gallery list out into a golden panel beside it (beneath it on a phone), as on
- * vivianmaier.com. The back office is reached from
- * the Account page, not the menu.
- */
+/** Menu button top left, site title in the middle, language flags top right — in every language. */
 export function Header({ site, topics, role }: HeaderProps): ReactElement {
   const { current, t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [galleriesOpen, setGalleriesOpen] = useState(false);
-  const close = (): void => {
-    setMenuOpen(false);
-    setGalleriesOpen(false);
-  };
+  const close = (): void => setMenuOpen(false);
 
   useEffect(() => {
     if (!menuOpen) return;
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') close();
+      if (e.key === 'Escape') setMenuOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return (): void => window.removeEventListener('keydown', onKey);
@@ -45,10 +35,9 @@ export function Header({ site, topics, role }: HeaderProps): ReactElement {
           aria-expanded={menuOpen}
           aria-controls="site-nav"
           aria-label={menuOpen ? t('nav.close') : t('nav.menu')}
-          onClick={(): void => (menuOpen ? close() : setMenuOpen(true))}
+          onClick={(): void => setMenuOpen((open) => !open)}
         >
           <span className="hamburger" aria-hidden="true" />
-          <span className="menu-label" aria-hidden="true">{t('nav.menu')}</span>
         </button>
         <a className="wordmark" dir={current.direction} href={hrefFor({ page: 'home' })} onClick={close} aria-label={site?.title ?? t('nav.home')}>
           <span className="wordmark-name">{site?.title}</span>
@@ -58,17 +47,8 @@ export function Header({ site, topics, role }: HeaderProps): ReactElement {
       </div>
       {menuOpen && <div className="nav-backdrop" onClick={close} aria-hidden="true" />}
       <nav id="site-nav" className={menuOpen ? 'site-nav open' : 'site-nav'} aria-label={t('nav.main')}>
-        <button
-          type="button"
-          className={galleriesOpen ? 'nav-group open' : 'nav-group'}
-          aria-expanded={galleriesOpen}
-          aria-controls="nav-galleries"
-          onClick={(): void => setGalleriesOpen((open) => !open)}
-        >
-          {t('nav.galleries')}
-          <span className="nav-chevron" aria-hidden="true" />
-        </button>
-        <ul id="nav-galleries" className="nav-sub" hidden={!galleriesOpen}>
+        <a href={hrefFor({ page: 'home' })} onClick={close}>{t('nav.galleries')}</a>
+        <ul className="nav-sub">
           {topics.map((topic) => (
             <li key={topic.id}>
               <a href={hrefFor({ page: 'gallery', slug: topic.slug })} onClick={close}>{topic.title}</a>
@@ -77,6 +57,7 @@ export function Header({ site, topics, role }: HeaderProps): ReactElement {
         </ul>
         <a href={hrefFor({ page: 'about' })} onClick={close}>{t('nav.about')}</a>
         <a href={hrefFor({ page: 'contact' })} onClick={close}>{t('nav.contact')}</a>
+        {role !== 'viewer' && <a href={hrefFor({ page: 'admin' })} onClick={close}>{t('nav.admin')}</a>}
         <a href={hrefFor({ page: 'account' })} onClick={close}>{role === 'viewer' ? t('nav.signIn') : t('nav.account')}</a>
       </nav>
     </header>
