@@ -17,7 +17,7 @@ export function Home({ topics }: HomeProps): ReactElement {
       <ul className="tile-grid">
         {topics.map((topic) => (
           <li key={topic.id}>
-            <a className="tile" href={hrefFor({ page: 'gallery', slug: topic.slug })}>
+            <a className={topic.cover ? 'tile' : 'tile no-cover'} href={hrefFor({ page: 'gallery', slug: topic.slug })}>
               {topic.cover && <img src={topic.cover.display} alt="" loading="lazy" />}
               <span className="tile-title">{topic.title}</span>
             </a>

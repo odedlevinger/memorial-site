@@ -3,6 +3,8 @@
 
 export type ContentStatus = 'draft' | 'published';
 export type Role = 'owner' | 'editor' | 'viewer';
+/** How a topic's page is shown: a picture set, an illustrated text, or a book. */
+export type TopicKind = 'pictures' | 'text' | 'book';
 
 /** Back office only: language code → field → text (see content-service's Translations). */
 export type Translations = Readonly<Record<string, Readonly<Record<string, string>>>>;
@@ -42,6 +44,7 @@ export interface Picture {
 export interface Topic {
   readonly id: string;
   readonly slug: string;
+  readonly kind: TopicKind;
   readonly title: string;
   readonly description: string | null;
   readonly position: number;
@@ -54,6 +57,13 @@ export interface Topic {
 
 export interface TopicDetail extends Topic {
   readonly pictures: readonly Picture[];
+  /** Text and book pages: the page's text — see components/RichText.tsx for the markup. */
+  readonly body: string | null;
+  /** Book pages: "Label: value" lines. */
+  readonly details: string | null;
+  readonly buyUrl: string | null;
+  /** Book pages: the buy button's text; null → the site's "Buy" label. */
+  readonly buyLabel: string | null;
 }
 
 export type PageSlug = 'about' | 'contact';
@@ -102,7 +112,9 @@ export interface Editor {
   readonly createdAt: string | null;
 }
 
-export type TopicPatch = Partial<Pick<Topic, 'title' | 'slug' | 'description' | 'status' | 'coverPictureId'>>;
+export type TopicPatch = Partial<
+  Pick<TopicDetail, 'title' | 'slug' | 'kind' | 'description' | 'body' | 'details' | 'buyUrl' | 'buyLabel' | 'status' | 'coverPictureId'>
+>;
 export type PicturePatch = Partial<Pick<Picture, 'caption' | 'dateText' | 'place' | 'story' | 'status' | 'topicId'>>;
 export type LanguagePatch = Partial<Pick<Language, 'name' | 'direction' | 'labels'>> & { readonly isDefault?: true };
 
@@ -178,7 +190,7 @@ export const contentApi = {
 
   topics: (): Promise<Topic[]> => call('/topics'),
   topic: (id: string): Promise<TopicDetail> => call(`/topics/${id}`),
-  createTopic: (title: string): Promise<TopicDetail> => call('/topics', json('POST', { title })),
+  createTopic: (title: string, kind: TopicKind = 'pictures'): Promise<TopicDetail> => call('/topics', json('POST', { title, kind })),
   updateTopic: (id: string, patch: TopicPatch, lang?: string): Promise<TopicDetail> => call(inLang(`/topics/${id}`, lang), json('PATCH', patch)),
   deleteTopic: (id: string): Promise<void> => call(`/topics/${id}`, { method: 'DELETE' }),
   reorderTopics: (ids: readonly string[]): Promise<Topic[]> => call('/topics/order', json('PUT', { ids })),

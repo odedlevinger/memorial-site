@@ -181,6 +181,112 @@ describe('public site', () => {
   });
 });
 
+describe('text and book pages', () => {
+  it('shows a text page with headings, quotes and photographs that open the viewer', async () => {
+    const t = server.addTopic('Her life', 'published', 0, 'text');
+    const a = server.addPicture(t.id, 'published', 'At the beach');
+    const b = server.addPicture(t.id, 'published');
+    const hidden = server.addPicture(t.id, 'draft', 'Draft');
+    t.description = 'A short life story';
+    t.body = [
+      '## Early years',
+      'She was born in 1926.',
+      'In New York.',
+      '',
+      '> Every picture tells a story.',
+      '',
+      `[photo ${a.id.slice(0, 8)} left]`, // the first picture whose id starts so
+      `[photo ${a.id} ${b.id}]`,
+      `[photo ${hidden.id}]`,
+      'See https://example.com.',
+    ].join('\n');
+    render(<App />);
+    // no cover picture → its tile is named outright
+    expect((await screen.findAllByText('Her life')).length).toBeGreaterThan(0);
+
+    go('#/galleries/her-life');
+    expect(await screen.findByRole('heading', { name: 'Her life' })).toBeTruthy();
+    expect(screen.getByText('A short life story')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Early years' })).toBeTruthy();
+    expect(screen.getByText('In New York.').parentElement?.querySelector('br')).toBeTruthy();
+    expect(screen.getByText('Every picture tells a story.').closest('blockquote')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'https://example.com' })).toBeTruthy();
+    expect(screen.queryByText('Draft')).toBeNull();
+    expect(screen.getAllByText('At the beach')).toHaveLength(2);
+    const photos = screen.getAllByRole('button', { name: /^Open photo/ });
+    expect(photos).toHaveLength(3);
+
+    fireEvent.click(photos[2]!);
+    const viewer = await screen.findByRole('dialog');
+    expect(viewer.getAttribute('aria-label')).toBe('Her life — photo 2 of 2');
+    fireEvent.click(within(viewer).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('shows a text page with no text yet', async () => {
+    server.addTopic('Empty text', 'published', 0, 'text');
+    render(<App />);
+    // no picture → the home tile shows its name outright
+    await waitFor(() => expect(document.querySelector('.tile.no-cover')?.textContent).toBe('Empty text'));
+    go('#/galleries/empty-text');
+    expect(await screen.findByRole('heading', { name: 'Empty text' })).toBeTruthy();
+    expect(document.querySelector('.rich-text')).toBeNull();
+  });
+
+  it('shows a book: cover, details, buy button and further photographs', async () => {
+    const t = server.addTopic('The book', 'published', 0, 'book');
+    const inside = server.addPicture(t.id, 'published', 'A spread');
+    const cover = server.addPicture(t.id, 'published', 'Cover');
+    Object.assign(t, {
+      coverPictureId: cover.id,
+      description: 'A photographer found',
+      body: 'The first monograph.',
+      details: 'Author: J. Maloof\n\nPages: 288\nHardcover',
+      buyUrl: 'https://shop.example/book',
+    });
+    window.location.hash = '#/galleries/the-book';
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'The book' })).toBeTruthy();
+    expect(screen.getByText('A photographer found')).toBeTruthy();
+    expect(screen.getByText('The first monograph.')).toBeTruthy();
+    expect(screen.getByText('Author')).toBeTruthy();
+    expect(screen.getByText('J. Maloof')).toBeTruthy();
+    expect(screen.getByText('Hardcover')).toBeTruthy();
+    const buy = screen.getByRole('link', { name: 'Buy' });
+    expect(buy.getAttribute('href')).toBe('https://shop.example/book');
+    expect(buy.getAttribute('rel')).toContain('noopener');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open photo 1' }));
+    let viewer = await screen.findByRole('dialog');
+    expect(within(viewer).getAllByText('Cover').length).toBeGreaterThan(0);
+    fireEvent.click(within(viewer).getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show photo 1' }));
+    viewer = await screen.findByRole('dialog');
+    expect(within(viewer).getAllByText('A spread').length).toBeGreaterThan(0);
+    expect(inside).toBeDefined();
+  });
+
+  it('shows a bare book: its own buy label, no cover, details or more photographs', async () => {
+    const t = server.addTopic('Bare', 'published', 0, 'book');
+    Object.assign(t, { buyUrl: 'https://shop.example/bare', buyLabel: 'Order now' });
+    window.location.hash = '#/galleries/bare';
+    render(<App />);
+    expect(await screen.findByRole('link', { name: 'Order now' })).toBeTruthy();
+    expect(document.querySelector('.book-cover, .book-details, .book-more, .rich-text')).toBeNull();
+  });
+
+  it('shows a book with one picture and no buy link', async () => {
+    const t = server.addTopic('Solo', 'published', 1, 'book');
+    t.details = ': odd line';
+    window.location.hash = '#/galleries/solo';
+    render(<App />);
+    expect(await screen.findByRole('button', { name: 'Open photo 1' })).toBeTruthy();
+    expect(screen.getByText(': odd line')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Buy' })).toBeNull();
+    expect(document.querySelector('.book-more')).toBeNull();
+  });
+});
+
 describe('site title', () => {
   it('shows the saved title and falls back to the default when it cannot load', async () => {
     server.site = { title: 'Lavi', tagline: '1940–2025', updatedAt: null, translations: {} };

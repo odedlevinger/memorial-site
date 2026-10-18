@@ -20,6 +20,14 @@ export function slugify(title: string): string {
   return slug || 'topic';
 }
 
+/**
+ * A published picture set needs at least one published picture; a text or book page shows
+ * as soon as it is published.
+ */
+function isShown(t: TopicEntity, publishedPictures: readonly PictureEntity[]): boolean {
+  return t.kind !== 'pictures' || publishedPictures.length > 0;
+}
+
 @Injectable()
 export class TopicsService {
   constructor(
@@ -31,13 +39,13 @@ export class TopicsService {
 
   // ── reads ────────────────────────────────────────────────────────────────
 
-  /** Published topics that have at least one published picture (public site). */
+  /** Published topics the public can see (see isShown), in display order. */
   async listPublished(lang: LangContext): Promise<TopicView[]> {
     const topics = await this.topics.find({ where: { status: 'published' }, order: { position: 'ASC' } });
     const views: TopicView[] = [];
     for (const t of topics) {
       const pics = await this.picturesOf(t.id, true);
-      if (pics.length > 0) views.push(this.toView(t, pics, lang, false));
+      if (isShown(t, pics)) views.push(this.toView(t, pics, lang, false));
     }
     return views;
   }
@@ -45,8 +53,8 @@ export class TopicsService {
   async getPublished(slug: string, lang: LangContext): Promise<TopicDetailView> {
     const topic = await this.topics.findOneBy({ slug, status: 'published' });
     const pics = topic ? await this.picturesOf(topic.id, true) : [];
-    if (!topic || pics.length === 0) throw new NotFoundException('Topic not found');
-    return { ...this.toView(topic, pics, lang, false), pictures: pics.map((p) => this.pictureView(p, lang, false)) };
+    if (!topic || !isShown(topic, pics)) throw new NotFoundException('Topic not found');
+    return this.detailView(topic, pics, lang, false);
   }
 
   /** Everything, drafts included, with every language's text (back office). */
@@ -59,8 +67,7 @@ export class TopicsService {
 
   async getAny(id: string, lang: LangContext): Promise<TopicDetailView> {
     const topic = await this.require(id);
-    const pics = await this.picturesOf(id, false);
-    return { ...this.toView(topic, pics, lang, true), pictures: pics.map((p) => this.pictureView(p, lang, true)) };
+    return this.detailView(topic, await this.picturesOf(id, false), lang, true);
   }
 
   // ── writes ───────────────────────────────────────────────────────────────
@@ -73,6 +80,11 @@ export class TopicsService {
         title: dto.title.trim(),
         slug: await this.uniqueSlug(slugify(dto.title)),
         description: dto.description ?? null,
+        kind: dto.kind ?? 'pictures',
+        body: null,
+        details: null,
+        buyUrl: null,
+        buyLabel: null,
         position: last.length > 0 ? (last[0] as TopicEntity).position + 1 : 0,
         status: 'draft',
         coverPictureId: null,
@@ -82,7 +94,10 @@ export class TopicsService {
     return this.getAny(topic.id, lang);
   }
 
-  /** Title and description are written in `lang`; the other fields are shared by all languages. */
+  /**
+   * Title, description, body, details and buy label are written in `lang`; the other fields
+   * are shared by all languages.
+   */
   async update(id: string, dto: UpdateTopicDto, actor: Caller, lang: LangContext): Promise<TopicDetailView> {
     const topic = await this.require(id);
     if (dto.title !== undefined) requireText(dto.title, 'title', lang);
@@ -96,6 +111,11 @@ export class TopicsService {
     }
     if (dto.title !== undefined) setText(topic, 'title', dto.title.trim(), lang);
     if (dto.description !== undefined) setText(topic, 'description', dto.description, lang);
+    if (dto.body !== undefined) setText(topic, 'body', dto.body, lang);
+    if (dto.details !== undefined) setText(topic, 'details', dto.details, lang);
+    if (dto.buyLabel !== undefined) setText(topic, 'buyLabel', dto.buyLabel, lang);
+    if (dto.buyUrl !== undefined) topic.buyUrl = dto.buyUrl;
+    if (dto.kind !== undefined) topic.kind = dto.kind;
     if (dto.status !== undefined) topic.status = dto.status;
     if (dto.coverPictureId !== undefined) topic.coverPictureId = dto.coverPictureId;
     await this.topics.save(topic);
@@ -162,6 +182,7 @@ export class TopicsService {
     return {
       id: t.id,
       slug: t.slug,
+      kind: t.kind,
       title: textOf(t, 'title', lang),
       description: textOf(t, 'description', lang),
       position: t.position,
@@ -170,6 +191,17 @@ export class TopicsService {
       cover: cover ? this.images.urls(cover.storageKey) : null,
       pictureCount: pics.length,
       ...(admin ? { translations: translationsOf(t) } : {}),
+    };
+  }
+
+  private detailView(t: TopicEntity, pics: readonly PictureEntity[], lang: LangContext, admin: boolean): TopicDetailView {
+    return {
+      ...this.toView(t, pics, lang, admin),
+      pictures: pics.map((p) => this.pictureView(p, lang, admin)),
+      body: textOf(t, 'body', lang),
+      details: textOf(t, 'details', lang),
+      buyUrl: t.buyUrl,
+      buyLabel: textOf(t, 'buyLabel', lang),
     };
   }
 

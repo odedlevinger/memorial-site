@@ -36,7 +36,7 @@ export class PublicController {
 
   @Get('public/topics')
   @Header('Cache-Control', 'public, max-age=30')
-  @ApiOperation({ summary: 'Published topics (with at least one published picture), in display order' })
+  @ApiOperation({ summary: 'Published topics (picture sets need at least one published picture), in display order' })
   @ApiQuery({ name: 'lang', required: false, description: 'language code; defaults to the default language' })
   @ApiResponse({ status: 200, description: 'Topic list' })
   async listTopics(@Query('lang') lang?: string): Promise<TopicView[]> {
@@ -45,7 +45,7 @@ export class PublicController {
 
   @Get('public/topics/:slug')
   @Header('Cache-Control', 'public, max-age=30')
-  @ApiOperation({ summary: 'One published topic with its published pictures' })
+  @ApiOperation({ summary: 'One published topic with its published pictures (and text / book fields)' })
   @ApiParam({ name: 'slug' })
   @ApiResponse({ status: 200, description: 'Topic with pictures' })
   @ApiQuery({ name: 'lang', required: false, description: 'language code; defaults to the default language' })

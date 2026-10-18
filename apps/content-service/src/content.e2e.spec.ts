@@ -209,6 +209,62 @@ describe('topics', () => {
   });
 });
 
+describe('page kinds (text / book)', () => {
+  beforeEach(async () => {
+    await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);
+  });
+
+  it('creates a text page that is public once published, even without pictures', async () => {
+    await http().post('/content/topics').set(as(EDITOR)).send({ title: 'Bad', kind: 'poem' }).expect(400);
+    const created = await http().post('/content/topics').set(as(EDITOR)).send({ title: 'Her life', kind: 'text' }).expect(201);
+    expect(created.body).toMatchObject({ kind: 'text', body: null, details: null, buyUrl: null, buyLabel: null });
+    const plain = await createTopic('Plain');
+    expect((await http().get(`/content/topics/${plain.id}`).set(as(EDITOR)).expect(200)).body.kind).toBe('pictures');
+
+    const id = created.body.id as string;
+    await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ body: 'x'.repeat(20001) }).expect(400);
+    await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ kind: 'poem' }).expect(400);
+    await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ body: '## Early years\n\nBorn in 1926.', status: 'published' }).expect(200);
+    await http().patch(`/content/topics/${plain.id}`).set(as(EDITOR)).send({ status: 'published' }).expect(200);
+
+    const list = await http().get('/content/public/topics').expect(200);
+    expect(list.body.map((t: { slug: string; kind: string }) => [t.slug, t.kind])).toEqual([['her-life', 'text']]);
+    const page = await http().get('/content/public/topics/her-life').expect(200);
+    expect(page.body).toMatchObject({ kind: 'text', body: '## Early years\n\nBorn in 1926.', pictures: [] });
+    expect(page.body.translations).toBeUndefined();
+  });
+
+  it('stores book details and a buy link, translated per language', async () => {
+    await http().post('/content/languages').set(as(EDITOR)).send({ code: 'he', name: 'עברית', direction: 'rtl' }).expect(201);
+    const book = await http().post('/content/topics').set(as(EDITOR)).send({ title: 'The book', kind: 'book' }).expect(201);
+    const id = book.body.id as string;
+    await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ buyUrl: 'javascript:alert(1)' }).expect(400);
+    await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ buyUrl: 'not a url' }).expect(400);
+    await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ buyLabel: 'x'.repeat(61) }).expect(400);
+    await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ details: 'x'.repeat(2001) }).expect(400);
+
+    const saved = await http()
+      .patch(`/content/topics/${id}`)
+      .set(as(EDITOR))
+      .send({ body: 'About the book', details: 'Pages: 288\nISBN: 123', buyUrl: 'https://shop.example/book', buyLabel: 'Buy', status: 'published' })
+      .expect(200);
+    expect(saved.body).toMatchObject({ kind: 'book', details: 'Pages: 288\nISBN: 123', buyUrl: 'https://shop.example/book', buyLabel: 'Buy' });
+    await http().patch(`/content/topics/${id}?lang=he`).set(as(EDITOR)).send({ details: 'עמודים: 288', buyLabel: 'לקנייה' }).expect(200);
+
+    const he = await http().get('/content/public/topics/the-book?lang=he').expect(200);
+    expect(he.body).toMatchObject({ body: 'About the book', details: 'עמודים: 288', buyLabel: 'לקנייה', buyUrl: 'https://shop.example/book' });
+
+    // switching the default language carries the book fields along
+    await http().patch('/content/languages/he').set(as(EDITOR)).send({ isDefault: true }).expect(200);
+    const en = await http().get('/content/public/topics/the-book?lang=en').expect(200);
+    expect(en.body).toMatchObject({ details: 'Pages: 288\nISBN: 123', buyLabel: 'Buy' });
+
+    const cleared = await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ buyUrl: null, kind: 'pictures' }).expect(200);
+    expect(cleared.body).toMatchObject({ kind: 'pictures', buyUrl: null });
+    await http().get('/content/public/topics/the-book').expect(404); // a picture set with no pictures
+  });
+});
+
 describe('pictures', () => {
   let topic: { id: string };
 

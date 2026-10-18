@@ -1311,3 +1311,252 @@ button.status {
 .chart-table td:last-child {
   font-variant-numeric: tabular-nums;
 }
+
+/* A gallery without a picture (a text or book page): its name always shows. */
+.tile.no-cover {
+  background: #e9e4dc;
+  color: var(--ink);
+}
+
+.tile.no-cover .tile-title {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: none;
+  opacity: 1;
+}
+
+/* ── Text and book pages: one readable column, photographs set into the text ── */
+.text-topic,
+.book {
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
+.text-topic-intro,
+.book-subtitle {
+  margin: -0.5rem 0 2rem;
+  text-align: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #555;
+}
+
+.rich-text {
+  font-family: var(--serif);
+  font-size: 1rem;
+  line-height: 1.9;
+  color: #444;
+}
+
+.rich-text::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+.rich-text > * + * {
+  margin-top: 1.1rem;
+}
+
+/* A side photograph sits beside the paragraphs that follow it, not beside a new section. */
+.rich-text h2,
+.rich-text blockquote,
+.rich-photos.align-full {
+  clear: both;
+}
+
+.rich-text h2 {
+  margin-top: 2.25rem;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.rich-text h2:dir(rtl) {
+  letter-spacing: normal;
+}
+
+.rich-text blockquote {
+  margin: 1.75rem 0;
+  padding-inline-start: 1.5rem;
+  border-inline-start: 2px solid var(--gold);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: #555;
+}
+
+.rich-text a {
+  color: var(--brown);
+}
+
+.rich-photos {
+  display: grid;
+  grid-template-columns: repeat(var(--count, 1), minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 2rem 0;
+}
+
+.rich-photos.align-left,
+.rich-photos.align-right {
+  width: min(45%, 18rem);
+  margin: 0.4rem 0 1rem;
+}
+
+.rich-photos.align-left {
+  float: left;
+  margin-right: 1.5rem;
+}
+
+.rich-photos.align-right {
+  float: right;
+  margin-left: 1.5rem;
+}
+
+.rich-photos figure {
+  margin: 0;
+}
+
+.rich-photo {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: #e6e6e6;
+  cursor: zoom-in;
+}
+
+.rich-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.rich-photos figcaption {
+  margin-top: 0.4rem;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+@media (max-width: 560px) {
+  .rich-photos.align-left,
+  .rich-photos.align-right {
+    float: none;
+    width: auto;
+    margin: 1.5rem 0;
+  }
+}
+
+.book-cover {
+  display: block;
+  margin: 0 auto 2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.book-cover img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - var(--bar-h) - 8rem);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.book .page-title {
+  margin-bottom: 1rem;
+}
+
+.book-details {
+  margin-top: 2.25rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+}
+
+.book-details > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 30%) 1fr;
+  gap: 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.book-details dt {
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.book-details dd {
+  margin: 0;
+  grid-column: 2;
+  color: var(--ink);
+}
+
+.book-buy {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.buy-button {
+  display: inline-block;
+  padding: 0.8rem 2.25rem;
+  background: var(--brown);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.buy-button:hover,
+.buy-button:focus-visible {
+  background: #6e573e;
+}
+
+.buy-button:dir(rtl) {
+  letter-spacing: normal;
+}
+
+.book-more {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 2.5rem;
+}
+
+/* Topic editor: the page-kind picker beside the new title, and the text / book fields. */
+.admin-row select {
+  width: auto;
+}
+
+.admin-form .admin-help {
+  margin: -0.5rem 0 0;
+  max-width: none;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  text-align: start;
+}
+
+.admin-help code {
+  padding: 0 0.25rem;
+  background: #ebe8e3;
+  border-radius: 0.2rem;
+  font-size: 0.95em;
+}
+
+.admin .body-editor {
+  font-family: var(--serif);
+  line-height: 1.7;
+  resize: vertical;
+}

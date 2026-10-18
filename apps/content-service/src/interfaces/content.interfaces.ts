@@ -3,6 +3,10 @@
 export type ContentStatus = 'draft' | 'published';
 export const CONTENT_STATUSES: readonly ContentStatus[] = ['draft', 'published'];
 
+/** How a topic's page is shown: a picture set, an illustrated text, or a book. */
+export type TopicKind = 'pictures' | 'text' | 'book';
+export const TOPIC_KINDS: readonly TopicKind[] = ['pictures', 'text', 'book'];
+
 export type Role = 'owner' | 'editor' | 'viewer';
 
 /**
@@ -36,6 +40,7 @@ export interface PictureView {
 export interface TopicView {
   readonly id: string;
   readonly slug: string;
+  readonly kind: TopicKind;
   readonly title: string;
   readonly description: string | null;
   readonly position: number;
@@ -49,6 +54,16 @@ export interface TopicView {
 
 export interface TopicDetailView extends TopicView {
   readonly pictures: readonly PictureView[];
+  /**
+   * Text and book pages: plain text, paragraphs separated by blank lines. A line may be
+   * `## heading`, `> quote`, or `[photo <id> …]` — one or more of the topic's pictures (by
+   * id or its first 8 characters), optionally followed by `left` / `right`.
+   */
+  readonly body: string | null;
+  /** Book pages: "Label: value" lines. */
+  readonly details: string | null;
+  readonly buyUrl: string | null;
+  readonly buyLabel: string | null;
 }
 
 /** Who is calling, as resolved from Kong's X-User-Id. */
