@@ -612,6 +612,22 @@ body {
   margin: 2rem 0 1rem;
 }
 
+.admin-h3 {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.admin-share-preview {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  aspect-ratio: 1.91;
+  object-fit: cover;
+  margin: 0 auto 1rem;
+  background: #ece9e3;
+}
+
 .admin-help {
   color: var(--muted);
   max-width: 40rem;

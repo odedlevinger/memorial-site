@@ -1,4 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
+import sharp from 'sharp';
 import request from 'supertest';
 import { createHarness, EDITOR, type MemoryImageStore, OWNER, sampleImage, UNKNOWN_ID, VIEWER } from './testing/harness.js';
 
@@ -414,7 +415,7 @@ describe('pages (About / Contact)', () => {
 describe('site title', () => {
   it('serves the defaults until an editor saves, then the trimmed saved values', async () => {
     const res = await http().get('/content/public/site').expect(200);
-    expect(res.body).toEqual({ title: 'Memory', tagline: 'a life in photographs', homeRows: [3], updatedAt: null });
+    expect(res.body).toEqual({ title: 'Memory', tagline: 'a life in photographs', homeRows: [3], shareImage: null, updatedAt: null });
     expect(res.headers['cache-control']).toBe('public, max-age=30');
 
     await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);
@@ -423,6 +424,7 @@ describe('site title', () => {
       title: 'Grandpa Lavi',
       tagline: '',
       homeRows: [3],
+      shareImage: null,
       updatedAt: expect.any(String),
       translations: { en: { title: 'Grandpa Lavi', tagline: '' } },
     });
@@ -447,5 +449,53 @@ describe('site title', () => {
     expect(saved.body).toMatchObject({ homeRows: [1, 3, 2] });
     await http().put('/content/site').set(as(OWNER)).send({ title: 'Lavi again', tagline: '' }).expect(200);
     await http().get('/content/public/site').expect(200).expect((r) => expect(r.body).toMatchObject({ title: 'Lavi again', homeRows: [1, 3, 2] }));
+  });
+
+  it('sets, replaces and removes the link-preview picture', async () => {
+    const first = await http().put('/content/site/share-image').set(as(OWNER)).attach('file', jpeg, 'a.jpg').expect(200);
+    const url = first.body.shareImage as string;
+    expect(url).toMatch(/^https:\/\/img\.test\/site\/[0-9a-f-]{36}\/share\.jpg$/);
+    const firstKey = url.replace('https://img.test/', '');
+    const meta = await sharp(store.files.get(firstKey) as Buffer).metadata();
+    expect([meta.format, meta.width, meta.height]).toEqual(['jpeg', 1200, 800]);
+    expect(first.body).toMatchObject({ title: 'Memory', tagline: 'a life in photographs' }); // created with the defaults
+
+    const second = await http().put('/content/site/share-image').set(as(OWNER)).attach('file', jpeg, 'b.jpg').expect(200);
+    expect(second.body.shareImage).not.toBe(url);
+    expect(store.files.has(firstKey)).toBe(false);
+    await http().get('/content/public/site').expect(200).expect((r) => expect(r.body.shareImage).toBe(second.body.shareImage));
+
+    const removed = await http().delete('/content/site/share-image').set(as(OWNER)).expect(200);
+    expect(removed.body.shareImage).toBeNull();
+    expect([...store.files.keys()].filter((k) => k.startsWith('site/'))).toEqual([]);
+    await http().delete('/content/site/share-image').set(as(OWNER)).expect(200); // nothing to remove
+  });
+
+  it('requires an editor and an image for the link-preview picture', async () => {
+    await http().put('/content/site/share-image').attach('file', jpeg, 'a.jpg').expect(401);
+    await http().put('/content/site/share-image').set(as(VIEWER)).attach('file', jpeg, 'a.jpg').expect(403);
+    await http().delete('/content/site/share-image').set(as(VIEWER)).expect(403);
+    await http().put('/content/site/share-image').set(as(OWNER)).expect(400);
+    await http().put('/content/site/share-image').set(as(OWNER)).attach('file', Buffer.from('not an image'), 'a.jpg').expect(400);
+    await http().delete('/content/site/share-image').set(as(OWNER)).expect(200); // no settings row yet
+  });
+
+  it('serves link-preview tags with the title, tagline and picture, escaped', async () => {
+    const plain = await http().get('/content/public/share-meta').expect(200);
+    expect(plain.headers['content-type']).toBe('text/html; charset=utf-8');
+    expect(plain.headers['cache-control']).toBe('public, max-age=60');
+    expect(plain.text).toContain('<title>Memory</title>');
+    expect(plain.text).toContain('<meta property="og:description" content="a life in photographs" />');
+    expect(plain.text).toContain('<meta name="twitter:card" content="summary" />');
+    expect(plain.text).not.toContain('og:image');
+
+    await http().put('/content/site').set(as(OWNER)).send({ title: 'Lavi <"&">', tagline: '' }).expect(200);
+    const { body } = await http().put('/content/site/share-image').set(as(OWNER)).attach('file', jpeg, 'a.jpg').expect(200);
+    const full = await http().get('/content/public/share-meta').expect(200);
+    expect(full.text).toContain('<title>Lavi &#60;&#34;&#38;&#34;&#62;</title>');
+    expect(full.text).toContain('<meta property="og:title" content="Lavi &#60;&#34;&#38;&#34;&#62;" />');
+    expect(full.text).not.toContain('description');
+    expect(full.text).toContain(`<meta property="og:image" content="${body.shareImage as string}" />`);
+    expect(full.text).toContain('<meta name="twitter:card" content="summary_large_image" />');
   });
 });

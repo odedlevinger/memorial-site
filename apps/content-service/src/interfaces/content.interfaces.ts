@@ -121,6 +121,8 @@ export interface SiteView {
   readonly tagline: string;
   /** Galleries in each row of the home page, top to bottom; rows after the last use its number. */
   readonly homeRows: readonly GridColumns[];
+  /** URL of the picture shown when a link to the site is shared; null = none. Shared by all languages. */
+  readonly shareImage: string | null;
   /** null while the site still uses the built-in defaults. */
   readonly updatedAt: string | null;
   /** Back office only: every language's text, for editing translations. */

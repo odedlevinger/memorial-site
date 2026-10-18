@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { FormEvent, ReactElement } from 'react';
-import { contentApi, type GridColumns, type Language, type PageSlug } from '../content';
+import type { ChangeEvent, FormEvent, ReactElement } from 'react';
+import { contentApi, type GridColumns, type Language, type PageSlug, type SiteInfo } from '../content';
 import { inputLang, textIn } from './translation';
 import { errorText, useAsync } from './useAsync';
 
@@ -119,7 +119,60 @@ function SiteForm({ lang, onChanged }: AdminPagesProps): ReactElement {
           {error && <p className="error" role="alert">{error}</p>}
         </form>
       )}
+      {site.data && <SharePicture site={site.data} onSaved={site.set} />}
     </section>
+  );
+}
+
+/**
+ * The picture link previews show (WhatsApp, Facebook…) beside the site title and tagline.
+ * Shared by every language; saved as soon as it is chosen.
+ */
+function SharePicture({ site, onSaved }: { readonly site: SiteInfo; readonly onSaved: (site: SiteInfo) => void }): ReactElement {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = (action: () => Promise<SiteInfo>, done: string): void => {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    action().then(
+      (saved) => {
+        onSaved(saved);
+        setMessage(done);
+      },
+      (err: unknown) => setError(errorText(err)),
+    ).finally(() => setBusy(false));
+  };
+
+  const choose = (e: ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) run(() => contentApi.setShareImage(file), 'Link preview picture saved');
+  };
+
+  return (
+    <div className="admin-form" role="group" aria-label="Link preview picture">
+      <h3 className="admin-h3">Link preview picture</h3>
+      <p className="admin-help">
+        Shown with the site title and tagline when someone shares a link to the site. A wide
+        picture works best (about 1200 × 630). Apps may take a while to show a new picture for a
+        link that was shared before.
+      </p>
+      {site.shareImage ? <img className="admin-share-preview" src={site.shareImage} alt="Link preview picture" /> : <p className="empty">No picture yet — previews show the title and tagline only.</p>}
+      <div className="admin-row">
+        <label className="btn">
+          {site.shareImage ? 'Replace picture' : 'Upload picture'}
+          <input type="file" accept="image/jpeg,image/png,image/webp" hidden disabled={busy} onChange={choose} aria-label="Upload link preview picture" />
+        </label>
+        {site.shareImage && (
+          <button className="btn danger" type="button" disabled={busy} onClick={(): void => run(contentApi.removeShareImage, 'Link preview picture removed')}>Remove picture</button>
+        )}
+      </div>
+      {message && <p className="notice" role="status">{message}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
+    </div>
   );
 }
 

@@ -46,7 +46,7 @@ export class FakeServer {
   pictures: PictureRow[] = [];
   owner: Editor = { email: 'me@example.com', role: 'owner', addedBy: null, createdAt: null };
   editors: Editor[] = [];
-  site: SiteInfo & { translations: Tr; homeRows: readonly GridColumns[] } = { title: 'Memory', tagline: 'a life in photographs', homeRows: [3], updatedAt: null, translations: {} };
+  site: SiteInfo & { translations: Tr; homeRows: readonly GridColumns[] } = { title: 'Memory', tagline: 'a life in photographs', homeRows: [3], shareImage: null, updatedAt: null, translations: {} };
   pages: Record<string, Page & { translations: Tr }> = {
     about: { slug: 'about', body: 'About this site.', updatedAt: null, translations: {} },
     contact: { slug: 'contact', body: 'Get in touch.', updatedAt: null, translations: {} },
@@ -180,6 +180,10 @@ export class FakeServer {
       s.updatedAt = '2026-10-17T00:00:00Z';
       return this.json(this.siteView(true));
     }
+    if (p === '/site/share-image') {
+      this.site.shareImage = method === 'PUT' ? `https://img.test/site/${uid()}/share.jpg` : null;
+      return this.json(this.siteView(true));
+    }
     if (page && !page[1]) {
       const row = this.pages[page[2]!]!;
       if (method === 'PUT') {
@@ -293,7 +297,7 @@ export class FakeServer {
 
   private siteView(admin: boolean): SiteInfo {
     const s = this.site;
-    const view = { title: this.text(s, 'title', s.title), tagline: this.text(s, 'tagline', s.tagline), homeRows: s.homeRows, updatedAt: s.updatedAt };
+    const view = { title: this.text(s, 'title', s.title), tagline: this.text(s, 'tagline', s.tagline), homeRows: s.homeRows, shareImage: s.shareImage, updatedAt: s.updatedAt };
     return admin ? { ...view, translations: s.translations } : view;
   }
 

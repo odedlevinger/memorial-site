@@ -20,6 +20,10 @@ export class SiteEntity {
   @Column({ type: 'simple-json', nullable: true })
   homeRows!: GridColumns[] | null;
 
+  /** Storage key (site/<uuid>) of the picture shown in link previews. null = none. */
+  @Column({ type: 'varchar', length: 80, nullable: true })
+  shareImageKey!: string | null;
+
   /** Other languages' text (and the default's), see Translations. null = none yet. */
   @Column({ type: 'simple-json', nullable: true })
   translations!: Translations | null;
