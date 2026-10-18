@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { contentApi, type TopicDetail } from '../content';
+import { contentApi, type Picture, type TopicDetail } from '../content';
 import { useI18n } from '../i18n';
-import { hrefFor } from '../route';
 import { Lightbox } from './Lightbox';
 import { NotFound } from './TextPages';
 
@@ -14,7 +13,6 @@ type State = { readonly status: 'loading' } | { readonly status: 'missing' } | {
 
 export function GalleryPage({ slug }: GalleryPageProps): ReactElement {
   const [state, setState] = useState<State>({ status: 'loading' });
-  const [open, setOpen] = useState<number | null>(null);
   const { current, t } = useI18n();
   const lang = current.code;
 
@@ -35,30 +33,99 @@ export function GalleryPage({ slug }: GalleryPageProps): ReactElement {
   const { topic } = state;
 
   return (
-    <section aria-labelledby="gallery-title">
-      <p className="crumbs">
-        <a href={hrefFor({ page: 'home' })}>{t('nav.galleries')}</a> / {topic.title}
-      </p>
+    <section className="gallery" aria-labelledby="gallery-title">
       <h1 id="gallery-title" className="page-title">{topic.title}</h1>
       {topic.description && <p className="gallery-intro">{topic.description}</p>}
-      <ul className="photo-grid">
-        {topic.pictures.map((p, i) => (
-          <li key={p.id}>
-            <button className="photo" onClick={(): void => setOpen(i)} aria-label={t('gallery.openPhoto', { n: i + 1 })}>
-              <img src={p.images.thumb} alt={p.caption ?? ''} loading="lazy" />
-            </button>
-          </li>
-        ))}
-      </ul>
-      {open !== null && (
-        <Lightbox
-          title={topic.title}
-          pictures={topic.pictures}
-          index={open}
-          onIndexChange={setOpen}
-          onClose={(): void => setOpen(null)}
-        />
-      )}
+      {topic.pictures.length > 0 && <Stage title={topic.title} pictures={topic.pictures} />}
     </section>
+  );
+}
+
+/**
+ * One large photograph with ‹ › beside it, its caption in a box at its foot and a strip of
+ * thumbnails below. Clicking the photograph opens the full-screen viewer (with the story);
+ * closing it leaves the stage on the last photograph viewed.
+ */
+function Stage({ title, pictures }: { readonly title: string; readonly pictures: readonly Picture[] }): ReactElement {
+  const { current, t } = useI18n();
+  const [index, setIndex] = useState(0);
+  const [viewing, setViewing] = useState(false);
+  const strip = useRef<HTMLUListElement>(null);
+  const count = pictures.length;
+  const forward = current.direction === 'rtl' ? -1 : 1;
+  const step = (delta: number): void => setIndex((i) => (i + delta + count) % count);
+  // index always stays within range (step() wraps), so the picture exists.
+  const pic = pictures[index] as Picture;
+  const meta = [pic.dateText, pic.place].filter(Boolean).join(' · ');
+
+  useEffect(() => {
+    if (viewing) return; // the viewer has the arrow keys while it is open
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'ArrowRight') setIndex((i) => (i + forward + count) % count);
+      else if (e.key === 'ArrowLeft') setIndex((i) => (i - forward + count) % count);
+    };
+    window.addEventListener('keydown', onKey);
+    return (): void => window.removeEventListener('keydown', onKey);
+  }, [viewing, count, forward]);
+
+  useEffect(() => {
+    // Keep the current thumbnail in sight as the stage moves along.
+    strip.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [index]);
+
+  return (
+    <>
+      <div className="stage">
+        {count > 1 && (
+          <button className="stage-nav stage-prev" onClick={(): void => step(-1)} aria-label={t('viewer.previous')}>
+            <Chevron />
+          </button>
+        )}
+        <figure className="stage-figure">
+          <button className="stage-photo" onClick={(): void => setViewing(true)} aria-label={t('gallery.openPhoto', { n: index + 1 })}>
+            <img src={pic.images.display} alt={pic.caption ?? ''} />
+          </button>
+          {(pic.caption || meta) && (
+            <figcaption className="stage-caption">
+              {pic.caption && <span>{pic.caption}</span>}
+              {meta && <span className="stage-meta">{meta}</span>}
+            </figcaption>
+          )}
+        </figure>
+        {count > 1 && (
+          <button className="stage-nav stage-next" onClick={(): void => step(1)} aria-label={t('viewer.next')}>
+            <Chevron />
+          </button>
+        )}
+      </div>
+      {count > 1 && (
+        <ul className="thumb-strip" ref={strip}>
+          {pictures.map((p, i) => (
+            <li key={p.id}>
+              <button
+                className="thumb"
+                aria-current={i === index}
+                aria-label={t('gallery.showPhoto', { n: i + 1 })}
+                onClick={(): void => setIndex(i)}
+              >
+                <img src={p.images.thumb} alt="" loading="lazy" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {viewing && (
+        <Lightbox title={title} pictures={pictures} index={index} onIndexChange={setIndex} onClose={(): void => setViewing(false)} />
+      )}
+    </>
+  );
+}
+
+/** A thin › — mirrored for "previous" and in right-to-left languages by CSS. */
+function Chevron(): ReactElement {
+  return (
+    <svg viewBox="0 0 16 32" width="16" height="32" aria-hidden="true">
+      <polyline points="2,2 14,16 2,30" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
   );
 }

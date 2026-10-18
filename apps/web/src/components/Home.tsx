@@ -13,7 +13,7 @@ export function Home({ topics }: HomeProps): ReactElement {
     return <p className="empty">{t('home.empty')}</p>;
   }
   return (
-    <section aria-label={t('nav.galleries')}>
+    <section className="home" aria-label={t('nav.galleries')}>
       <ul className="tile-grid">
         {topics.map((topic) => (
           <li key={topic.id}>

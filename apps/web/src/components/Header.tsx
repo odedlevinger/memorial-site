@@ -12,7 +12,11 @@ interface HeaderProps {
   readonly role: Role;
 }
 
-/** Menu button top left, site title in the middle, language flags top right — in every language. */
+/**
+ * A brown bar: ☰ Menu top left, the site title in the middle, the language flag top right —
+ * in every language. The menu drops down from under the bar. The back office is reached from
+ * the Account page, not the menu.
+ */
 export function Header({ site, topics, role }: HeaderProps): ReactElement {
   const { current, t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -38,6 +42,7 @@ export function Header({ site, topics, role }: HeaderProps): ReactElement {
           onClick={(): void => setMenuOpen((open) => !open)}
         >
           <span className="hamburger" aria-hidden="true" />
+          <span className="menu-label" aria-hidden="true">{t('nav.menu')}</span>
         </button>
         <a className="wordmark" dir={current.direction} href={hrefFor({ page: 'home' })} onClick={close} aria-label={site?.title ?? t('nav.home')}>
           <span className="wordmark-name">{site?.title}</span>
@@ -57,7 +62,6 @@ export function Header({ site, topics, role }: HeaderProps): ReactElement {
         </ul>
         <a href={hrefFor({ page: 'about' })} onClick={close}>{t('nav.about')}</a>
         <a href={hrefFor({ page: 'contact' })} onClick={close}>{t('nav.contact')}</a>
-        {role !== 'viewer' && <a href={hrefFor({ page: 'admin' })} onClick={close}>{t('nav.admin')}</a>}
         <a href={hrefFor({ page: 'account' })} onClick={close}>{role === 'viewer' ? t('nav.signIn') : t('nav.account')}</a>
       </nav>
     </header>
