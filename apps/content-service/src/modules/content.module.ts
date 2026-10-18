@@ -6,6 +6,7 @@ import { AuditLogEntity } from '../entities/audit-log.entity.js';
 import { DailySignInEntity } from '../entities/daily-sign-in.entity.js';
 import { EditorEntity } from '../entities/editor.entity.js';
 import { LanguageEntity } from '../entities/language.entity.js';
+import { OwnerEntity } from '../entities/owner.entity.js';
 import { PageEntity } from '../entities/page.entity.js';
 import { SiteEntity } from '../entities/site.entity.js';
 import { PictureEntity } from '../entities/picture.entity.js';
@@ -35,7 +36,7 @@ import { IDENTITY_LOOKUP, RolesService } from '../services/roles.service.js';
 import { SeedService } from '../services/seed.service.js';
 import { TopicsService } from '../services/topics.service.js';
 
-export const ENTITIES = [TopicEntity, PictureEntity, EditorEntity, PageEntity, SiteEntity, LanguageEntity, DailySignInEntity, AuditLogEntity];
+export const ENTITIES = [TopicEntity, PictureEntity, EditorEntity, PageEntity, SiteEntity, LanguageEntity, DailySignInEntity, AuditLogEntity, OwnerEntity];
 
 /** Cloud Storage when STORAGE_BUCKET is set, otherwise a local folder (docker-compose dev). */
 export function imageStoreFactory(config: ConfigService): ImageStore {

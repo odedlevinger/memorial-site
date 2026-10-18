@@ -93,10 +93,13 @@ export interface Activity {
   readonly people: number;
 }
 
+/** A back-office admin: the owner(s) first, then the invited editors. */
 export interface Editor {
   readonly email: string;
-  readonly addedBy: string;
-  readonly createdAt: string;
+  readonly role: 'owner' | 'editor';
+  /** null for an owner taken from configuration. */
+  readonly addedBy: string | null;
+  readonly createdAt: string | null;
 }
 
 export type TopicPatch = Partial<Pick<Topic, 'title' | 'slug' | 'description' | 'status' | 'coverPictureId'>>;
@@ -205,6 +208,8 @@ export const contentApi = {
   editors: (): Promise<Editor[]> => call('/editors'),
   addEditor: (email: string): Promise<Editor[]> => call('/editors', json('POST', { email })),
   removeEditor: (email: string): Promise<Editor[]> => call(`/editors/${encodeURIComponent(email)}`, { method: 'DELETE' }),
+  /** Hands ownership to an editor; the caller stays on as an editor. */
+  changeOwner: (email: string): Promise<Editor[]> => call('/editors/owner', json('PUT', { email })),
 };
 
 /** Returns a copy of `list` with the item at `from` moved to `to`. */

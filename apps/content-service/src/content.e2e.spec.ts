@@ -90,24 +90,56 @@ describe('me + access control', () => {
 });
 
 describe('editors (owner only)', () => {
+  const ownerRow = { email: OWNER.email, role: 'owner', addedBy: null, createdAt: null };
+
   it('owner invites and removes editors; editors cannot manage editors', async () => {
     await http().get('/content/editors').set(as(VIEWER)).expect(403);
-    await http().get('/content/editors').set(as(OWNER)).expect(200, []);
+    await http().get('/content/editors').set(as(OWNER)).expect(200, [ownerRow]);
     await http().post('/content/editors').set(as(OWNER)).send({ email: 'bad' }).expect(400);
     await http().post('/content/editors').set(as(OWNER)).send({ email: 'Owner@Example.com' }).expect(400);
 
     const added = await http().post('/content/editors').set(as(OWNER)).send({ email: 'Editor@Example.COM' }).expect(201);
-    expect(added.body).toEqual([expect.objectContaining({ email: EDITOR.email, addedBy: OWNER.email })]);
+    expect(added.body).toEqual([ownerRow, expect.objectContaining({ email: EDITOR.email, role: 'editor', addedBy: OWNER.email })]);
     await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201); // idempotent
-    expect((await http().get('/content/editors').set(as(OWNER))).body).toHaveLength(1);
+    expect((await http().get('/content/editors').set(as(OWNER))).body).toHaveLength(2);
 
     await http().get('/content/me').set(as(EDITOR)).expect(200, { email: EDITOR.email, role: 'editor' });
     await http().get('/content/editors').set(as(EDITOR)).expect(403);
     await http().get('/content/topics').set(as(EDITOR)).expect(200);
 
     await http().delete('/content/editors/nobody@example.com').set(as(OWNER)).expect(404);
-    await http().delete(`/content/editors/${EDITOR.email}`).set(as(OWNER)).expect(200, []);
+    await http().delete(`/content/editors/${OWNER.email}`).set(as(OWNER)).expect(400);
+    await http().delete(`/content/editors/${EDITOR.email}`).set(as(OWNER)).expect(200, [ownerRow]);
     await http().get('/content/topics').set(as(EDITOR)).expect(403);
+  });
+
+  it('owner hands ownership to an editor and stays on as an editor', async () => {
+    await http().put('/content/editors/owner').set(as(OWNER)).send({ email: 'bad' }).expect(400);
+    await http().put('/content/editors/owner').set(as(OWNER)).send({ email: OWNER.email }).expect(400); // already owner
+    await http().put('/content/editors/owner').set(as(OWNER)).send({ email: EDITOR.email }).expect(400); // not an editor yet
+    await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);
+    await http().put('/content/editors/owner').set(as(EDITOR)).send({ email: EDITOR.email }).expect(403);
+
+    const changed = await http().put('/content/editors/owner').set(as(OWNER)).send({ email: 'Editor@Example.com' }).expect(200);
+    expect(changed.body).toEqual([
+      { email: EDITOR.email, role: 'owner', addedBy: OWNER.email, createdAt: expect.any(String) },
+      expect.objectContaining({ email: OWNER.email, role: 'editor', addedBy: OWNER.email }),
+    ]);
+    await http().get('/content/me').set(as(EDITOR)).expect(200, { email: EDITOR.email, role: 'owner' });
+    await http().get('/content/me').set(as(OWNER)).expect(200, { email: OWNER.email, role: 'editor' });
+    await http().get('/content/editors').set(as(OWNER)).expect(403);
+    await http().post('/content/editors').set(as(EDITOR)).send({ email: EDITOR.email }).expect(400); // already owner
+
+    // and back again — the previous owner was already an editor, so no duplicate row
+    await http().post('/content/editors').set(as(EDITOR)).send({ email: VIEWER.email }).expect(201);
+    await http().put('/content/editors/owner').set(as(EDITOR)).send({ email: OWNER.email }).expect(200);
+    await http().put('/content/editors/owner').set(as(OWNER)).send({ email: EDITOR.email }).expect(200);
+    const list = await http().get('/content/editors').set(as(EDITOR)).expect(200);
+    expect(list.body.map((e: { email: string; role: string }) => `${e.role}:${e.email}`)).toEqual([
+      `owner:${EDITOR.email}`,
+      `editor:${VIEWER.email}`,
+      `editor:${OWNER.email}`,
+    ]);
   });
 });
 

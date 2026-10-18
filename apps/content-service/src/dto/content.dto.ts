@@ -119,6 +119,13 @@ export class AddEditorDto {
   email!: string;
 }
 
+export class ChangeOwnerDto {
+  @ApiProperty({ example: 'cousin@gmail.com', description: 'must already be an editor' })
+  @IsEmail()
+  @MaxLength(254)
+  email!: string;
+}
+
 export class UpdatePageDto {
   @ApiProperty({
     maxLength: 10000,
