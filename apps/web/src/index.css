@@ -230,8 +230,10 @@ body {
   display: none;
 }
 
-/* The open gallery list: a lighter, golden panel beside the menu, names left-aligned. */
+/* The open gallery list: a lighter, golden panel beside the menu, names left-aligned in every
+   language. Each name still reads in its own direction. */
 .nav-sub {
+  direction: ltr;
   position: fixed;
   top: var(--bar-h);
   bottom: 0;
@@ -243,12 +245,13 @@ body {
   flex-direction: column;
   align-items: flex-start;
   gap: 1.35rem;
-  text-align: start;
+  text-align: left;
   background: var(--gold);
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.2);
 }
 
 .nav-sub li a {
+  unicode-bidi: plaintext;
   color: #fff;
   opacity: 0.92;
 }
