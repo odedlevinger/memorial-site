@@ -92,7 +92,7 @@ function TextTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
   );
 }
 
-/** A book: its cover, title, text, a details table, a buy button, then any other photographs. */
+/** A book: its cover, title, text, a details table and any other photographs, with a buy button above and below. */
 function BookTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
   const { t } = useI18n();
   const { open, viewer } = useViewer(topic.title, topic.pictures);
@@ -107,6 +107,14 @@ function BookTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
       return at > 0 ? { label: line.slice(0, at).trim(), value: line.slice(at + 1).trim() } : { label: '', value: line };
     });
 
+  const buy = topic.buyUrl && (
+    <p className="book-buy">
+      <a className="buy-button" href={topic.buyUrl} target="_blank" rel="noopener noreferrer">
+        {topic.buyLabel || t('book.buy')}
+      </a>
+    </p>
+  );
+
   return (
     <article className="book" aria-labelledby="gallery-title">
       {cover && (
@@ -116,6 +124,7 @@ function BookTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
       )}
       <h1 id="gallery-title" className="page-title">{topic.title}</h1>
       {topic.description && <p className="book-subtitle">{formatInline(topic.description)}</p>}
+      {buy}
       {topic.body && <RichText body={topic.body} pictures={topic.pictures} onOpen={open} />}
       {details.length > 0 && (
         <dl className="book-details">
@@ -126,13 +135,6 @@ function BookTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
             </div>
           ))}
         </dl>
-      )}
-      {topic.buyUrl && (
-        <p className="book-buy">
-          <a className="buy-button" href={topic.buyUrl} target="_blank" rel="noopener noreferrer">
-            {topic.buyLabel || t('book.buy')}
-          </a>
-        </p>
       )}
       {more.length > 0 && (
         <ul className="book-more">
@@ -145,6 +147,8 @@ function BookTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
           ))}
         </ul>
       )}
+      {/* Repeated at the end, unless nothing sits between it and the one at the top. */}
+      {(topic.body || details.length > 0 || more.length > 0) && buy}
       {viewer}
     </article>
   );
