@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { contentApi, type Picture, type TopicDetail } from '../content';
 import { useI18n } from '../i18n';
 import { hrefFor } from '../route';
+import { formatInline } from './Formatting';
 import { Lightbox } from './Lightbox';
 import { RichText } from './RichText';
 import { NotFound } from './TextPages';
@@ -50,7 +51,7 @@ function PictureSet({ topic }: { readonly topic: TopicDetail }): ReactElement {
         <a href={hrefFor({ page: 'home' })}>{t('nav.galleries')}</a> / {topic.title}
       </p>
       <h1 id="gallery-title" className="page-title">{topic.title}</h1>
-      {topic.description && <p className="gallery-intro">{topic.description}</p>}
+      {topic.description && <p className="gallery-intro">{formatInline(topic.description)}</p>}
       <ul className={`photo-grid cols-${topic.columns}`}>
         {topic.pictures.map((p, i) => (
           <li key={p.id}>
@@ -84,7 +85,7 @@ function TextTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
   return (
     <article className="text-topic" aria-labelledby="gallery-title">
       <h1 id="gallery-title" className="page-title">{topic.title}</h1>
-      {topic.description && <p className="text-topic-intro">{topic.description}</p>}
+      {topic.description && <p className="text-topic-intro">{formatInline(topic.description)}</p>}
       {topic.body && <RichText body={topic.body} pictures={topic.pictures} onOpen={open} />}
       {viewer}
     </article>
@@ -114,14 +115,14 @@ function BookTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
         </button>
       )}
       <h1 id="gallery-title" className="page-title">{topic.title}</h1>
-      {topic.description && <p className="book-subtitle">{topic.description}</p>}
+      {topic.description && <p className="book-subtitle">{formatInline(topic.description)}</p>}
       {topic.body && <RichText body={topic.body} pictures={topic.pictures} onOpen={open} />}
       {details.length > 0 && (
         <dl className="book-details">
           {details.map((d, i) => (
             <div key={i}>
-              {d.label && <dt>{d.label}</dt>}
-              <dd>{d.value}</dd>
+              {d.label && <dt>{formatInline(d.label)}</dt>}
+              <dd>{formatInline(d.value)}</dd>
             </div>
           ))}
         </dl>
@@ -162,7 +163,7 @@ function MovieTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
   return (
     <article className="movie" aria-labelledby="gallery-title">
       <h1 id="gallery-title" className="page-title">{topic.title}</h1>
-      {topic.description && <p className="text-topic-intro">{topic.description}</p>}
+      {topic.description && <p className="text-topic-intro">{formatInline(topic.description)}</p>}
       {id && (
         <div className="movie-frame">
           <iframe

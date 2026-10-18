@@ -9,6 +9,7 @@ import { PictureEditor } from './PictureEditor';
 import { Reorderable } from './Reorderable';
 import { inputLang, textIn } from './translation';
 import { errorText, useAsync } from './useAsync';
+import { FormattedTextarea } from './FormattedTextarea';
 
 interface AdminTopicProps {
   readonly id: string;
@@ -156,7 +157,7 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
         <label>Title<input value={fields.title} maxLength={120} required={lang.isDefault} placeholder={lang.isDefault ? undefined : t.title} {...inputLang(lang)} onChange={(e): void => set('title', e.target.value)} /></label>
         <label>Web address<input value={fields.slug} maxLength={140} required pattern="[a-z0-9]+(-[a-z0-9]+)*" onChange={(e): void => set('slug', e.target.value)} /></label>
         <label>Page kind<KindSelect value={fields.kind} onChange={(k): void => set('kind', k)} /></label>
-        <label>{hasText ? 'Introduction' : 'Description'}<textarea value={fields.description} maxLength={2000} rows={3} placeholder={hint(t.description)} {...inputLang(lang)} onChange={(e): void => set('description', e.target.value)} /></label>
+        <FormattedTextarea label={hasText ? 'Introduction' : 'Description'} value={fields.description} maxLength={2000} rows={3} placeholder={hint(t.description)} {...inputLang(lang)} onChange={(v): void => set('description', v)} />
         {fields.kind === 'pictures' && (
           <fieldset className="admin-choice">
             <legend>Pictures per row</legend>
@@ -176,21 +177,28 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
         )}
         {hasText && (
           <>
-            <label>{fields.kind === 'book' ? 'About the book' : fields.kind === 'movie' ? 'Text about the movie (optional)' : 'Text'}
-              <textarea ref={bodyBox} className="body-editor" value={fields.body} maxLength={20000} rows={16} placeholder={hint(t.body)} {...inputLang(lang)} onChange={(e): void => set('body', e.target.value)} />
-            </label>
+            <FormattedTextarea
+              label={fields.kind === 'book' ? 'About the book' : fields.kind === 'movie' ? 'Text about the movie (optional)' : 'Text'}
+              ref={bodyBox}
+              className="body-editor"
+              value={fields.body}
+              maxLength={20000}
+              rows={16}
+              placeholder={hint(t.body)}
+              {...inputLang(lang)}
+              onChange={(v): void => set('body', v)}
+            />
             <p className="admin-help">
               Blank line = new paragraph · <code>## Heading</code> · <code>&gt; Quote</code> · a picture on its own line:{' '}
               <code>[photo …]</code> (use “Insert in text” below; add <code>left</code> or <code>right</code> before the <code>]</code> to set it beside
-              the text, or several picture codes to show them side by side). Pictures appear only once published.
+              the text, or several picture codes to show them side by side). Pictures appear only once published. Select words and use the
+              buttons above the text for bold, italic, underline or a colour.
             </p>
           </>
         )}
         {fields.kind === 'book' && (
           <>
-            <label>Book details
-              <textarea value={fields.details} maxLength={2000} rows={6} placeholder={hint(t.details) ?? 'Author: …\nPublisher: …\nPages: …\nISBN: …'} {...inputLang(lang)} onChange={(e): void => set('details', e.target.value)} />
-            </label>
+            <FormattedTextarea label="Book details" value={fields.details} maxLength={2000} rows={6} placeholder={hint(t.details) ?? 'Author: …\nPublisher: …\nPages: …\nISBN: …'} {...inputLang(lang)} onChange={(v): void => set('details', v)} />
             <p className="admin-help">One “Label: value” per line. The cover picture is shown as the book’s cover.</p>
             <label>Buy link<input type="url" value={fields.buyUrl} maxLength={500} placeholder="https://…" onChange={(e): void => set('buyUrl', e.target.value)} /></label>
             <label>Buy button text<input value={fields.buyLabel} maxLength={60} placeholder={hint(t.buyLabel) ?? 'Buy'} {...inputLang(lang)} onChange={(e): void => set('buyLabel', e.target.value)} /></label>

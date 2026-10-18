@@ -1,6 +1,8 @@
+
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactElement } from 'react';
 import { contentApi, type ContentStatus, type Language, type Picture, type Topic } from '../content';
+import { FormattedTextarea } from './FormattedTextarea';
 import { inputLang, textIn } from './translation';
 import { errorText } from './useAsync';
 
@@ -85,7 +87,7 @@ export function PictureEditor({ picture, lang, topics, onClose, onSaved }: Pictu
         <label>Caption<input value={f.caption} maxLength={300} placeholder={hint(picture.caption)} {...inputLang(lang)} onChange={(e): void => set('caption', e.target.value)} /></label>
         <label>Date / year<input value={f.dateText} maxLength={60} placeholder={hint(picture.dateText) ?? 'e.g. Summer 1974'} {...inputLang(lang)} onChange={(e): void => set('dateText', e.target.value)} /></label>
         <label>Place<input value={f.place} maxLength={120} placeholder={hint(picture.place)} {...inputLang(lang)} onChange={(e): void => set('place', e.target.value)} /></label>
-        <label>Story<textarea value={f.story} maxLength={5000} rows={5} placeholder={hint(picture.story)} {...inputLang(lang)} onChange={(e): void => set('story', e.target.value)} /></label>
+        <FormattedTextarea label="Story" value={f.story} maxLength={5000} rows={5} placeholder={hint(picture.story)} {...inputLang(lang)} onChange={(v): void => set('story', v)} />
         <label>Status
           <select value={f.status} onChange={(e): void => set('status', e.target.value as ContentStatus)}>
             <option value="draft">Draft (hidden)</option>
