@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
-import { contentApi, type Language, type PageSlug } from '../content';
+import { contentApi, type GridColumns, type Language, type PageSlug } from '../content';
 import { inputLang, textIn } from './translation';
 import { errorText, useAsync } from './useAsync';
 
@@ -15,7 +15,7 @@ interface AdminPagesProps {
   readonly onChanged: () => void;
 }
 
-/** Edit the site title and the text of the About and Contact pages. */
+/** Edit the site title, the home page layout and the text of the About and Contact pages. */
 export function AdminPages({ lang, onChanged }: AdminPagesProps): ReactElement {
   return (
     <div>
@@ -32,24 +32,36 @@ export function AdminPages({ lang, onChanged }: AdminPagesProps): ReactElement {
   );
 }
 
+interface SiteFields {
+  title: string;
+  tagline: string;
+  homeColumns: GridColumns;
+}
+
 function SiteForm({ lang, onChanged }: AdminPagesProps): ReactElement {
   const site = useAsync(contentApi.site, 'site');
-  const [fields, setFields] = useState<{ title: string; tagline: string } | null>(null);
+  const [fields, setFields] = useState<SiteFields | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (site.data) setFields({ title: textIn(site.data, 'title', site.data.title, lang), tagline: textIn(site.data, 'tagline', site.data.tagline, lang) });
+    if (site.data) {
+      setFields({
+        title: textIn(site.data, 'title', site.data.title, lang),
+        tagline: textIn(site.data, 'tagline', site.data.tagline, lang),
+        homeColumns: site.data.homeColumns,
+      });
+    }
   }, [site.data, lang]);
 
-  const save = (e: FormEvent, f: { title: string; tagline: string }): void => {
+  const save = (e: FormEvent, f: SiteFields): void => {
     e.preventDefault();
     setError(null);
     setMessage(null);
-    contentApi.updateSite(f.title, f.tagline, lang.code).then(
+    contentApi.updateSite(f.title, f.tagline, f.homeColumns, lang.code).then(
       (saved) => {
         site.set(saved);
-        setMessage('Site title saved');
+        setMessage('Site settings saved');
         onChanged();
       },
       (err: unknown) => setError(errorText(err)),
@@ -60,7 +72,7 @@ function SiteForm({ lang, onChanged }: AdminPagesProps): ReactElement {
 
   return (
     <section aria-labelledby="site-title">
-      <h2 id="site-title" className="admin-h2">Site title</h2>
+      <h2 id="site-title" className="admin-h2">Site</h2>
       {site.error && <p className="error" role="alert">{site.error}</p>}
       {fields === null ? (
         !site.error && <p className="empty">Loading…</p>
@@ -68,8 +80,17 @@ function SiteForm({ lang, onChanged }: AdminPagesProps): ReactElement {
         <form className="admin-form" onSubmit={(e): void => save(e, fields)}>
           <label>Title<input value={fields.title} required={lang.isDefault} maxLength={60} placeholder={hint(site.data?.title)} {...inputLang(lang)} onChange={(e): void => setFields({ ...fields, title: e.target.value })} /></label>
           <label>Tagline (optional)<input value={fields.tagline} maxLength={120} placeholder={hint(site.data?.tagline)} {...inputLang(lang)} onChange={(e): void => setFields({ ...fields, tagline: e.target.value })} /></label>
+          <fieldset className="admin-choice">
+            <legend>Galleries per row on the home page</legend>
+            {([1, 2, 3] as const).map((n) => (
+              <label key={n}>
+                <input type="radio" name="homeColumns" checked={fields.homeColumns === n} onChange={(): void => setFields({ ...fields, homeColumns: n })} />
+                {n}
+              </label>
+            ))}
+          </fieldset>
           <div className="admin-row">
-            <button className="btn" type="submit">Save site title</button>
+            <button className="btn" type="submit">Save site settings</button>
           </div>
           {message && <p className="notice" role="status">{message}</p>}
           {error && <p className="error" role="alert">{error}</p>}

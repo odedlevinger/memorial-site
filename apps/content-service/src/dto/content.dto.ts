@@ -208,6 +208,11 @@ export class UpdateSiteDto {
   @IsString()
   @MaxLength(120)
   tagline!: string;
+
+  @ApiPropertyOptional({ enum: GRID_COLUMNS, description: 'how many galleries the home page shows in one row; unchanged when left out' })
+  @ValidateIf((_, v) => v !== undefined) // null is not a row width
+  @IsIn(GRID_COLUMNS)
+  homeColumns?: GridColumns;
 }
 
 const LANG_CODE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8}){0,2}$/;

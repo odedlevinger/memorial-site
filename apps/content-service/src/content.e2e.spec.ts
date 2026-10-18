@@ -414,7 +414,7 @@ describe('pages (About / Contact)', () => {
 describe('site title', () => {
   it('serves the defaults until an editor saves, then the trimmed saved values', async () => {
     const res = await http().get('/content/public/site').expect(200);
-    expect(res.body).toEqual({ title: 'Memory', tagline: 'a life in photographs', updatedAt: null });
+    expect(res.body).toEqual({ title: 'Memory', tagline: 'a life in photographs', homeColumns: 3, updatedAt: null });
     expect(res.headers['cache-control']).toBe('public, max-age=30');
 
     await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);
@@ -422,6 +422,7 @@ describe('site title', () => {
     expect(saved.body).toEqual({
       title: 'Grandpa Lavi',
       tagline: '',
+      homeColumns: 3,
       updatedAt: expect.any(String),
       translations: { en: { title: 'Grandpa Lavi', tagline: '' } },
     });
@@ -436,5 +437,15 @@ describe('site title', () => {
     await http().put('/content/site').set(as(OWNER)).send({ title: 'x'.repeat(61), tagline: '' }).expect(400);
     await http().put('/content/site').set(as(OWNER)).send({ title: 'x', tagline: 'y'.repeat(121) }).expect(400);
     await http().put('/content/site').set(as(OWNER)).send({ title: 'x' }).expect(400);
+    for (const bad of [0, 4, 1.5, '2', null]) {
+      await http().put('/content/site').set(as(OWNER)).send({ title: 'x', tagline: '', homeColumns: bad }).expect(400);
+    }
+  });
+
+  it('stores how many galleries the home page shows per row, kept when left out', async () => {
+    const two = await http().put('/content/site').set(as(OWNER)).send({ title: 'Lavi', tagline: '', homeColumns: 2 }).expect(200);
+    expect(two.body).toMatchObject({ homeColumns: 2 });
+    await http().put('/content/site').set(as(OWNER)).send({ title: 'Lavi again', tagline: '' }).expect(200);
+    await http().get('/content/public/site').expect(200).expect((r) => expect(r.body).toMatchObject({ title: 'Lavi again', homeColumns: 2 }));
   });
 });

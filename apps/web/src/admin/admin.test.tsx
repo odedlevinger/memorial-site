@@ -436,15 +436,21 @@ describe('pages', () => {
     const title = await screen.findByLabelText('Title');
     fireEvent.change(title, { target: { value: 'Grandpa Lavi' } });
     fireEvent.change(screen.getByLabelText('Tagline (optional)'), { target: { value: '' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save site title' }));
-    expect(await screen.findByText('Site title saved')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Save site settings' }));
+    expect(await screen.findByText('Site settings saved')).toBeTruthy();
     expect(await within(header).findByText('Grandpa Lavi')).toBeTruthy();
     await waitFor(() => expect(document.title).toBe('Grandpa Lavi'));
     expect(within(header).queryByText('a life in photographs')).toBeNull();
     expect(screen.getByRole('contentinfo').textContent).toContain('Grandpa Lavi');
 
+    const homeRow = screen.getByRole('group', { name: 'Galleries per row on the home page' });
+    expect((within(homeRow).getByRole('radio', { name: '3' }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(within(homeRow).getByRole('radio', { name: '2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save site settings' }));
+    await waitFor(() => expect(server.site.homeColumns).toBe(2));
+
     server.failNext(/PUT \/api\/content\/site$/, 400, { message: ['title must not be empty'] });
-    fireEvent.click(screen.getByRole('button', { name: 'Save site title' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save site settings' }));
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'title must not be empty');
   });
 
@@ -458,7 +464,7 @@ describe('pages', () => {
   it('shows a load error when the site title cannot be fetched', async () => {
     server.failNext(/GET \/api\/content\/site$/, 503, { message: 'No site' });
     await openAdmin('#/admin/pages');
-    const form = screen.getByRole('region', { name: 'Site title' });
+    const form = screen.getByRole('region', { name: 'Site' });
     expect(await within(form).findByRole('alert')).toHaveProperty('textContent', 'No site');
     expect(await screen.findByLabelText('Contact text')).toBeTruthy();
   });
@@ -584,12 +590,12 @@ describe('languages', () => {
     expect(pic).toMatchObject({ caption: 'Corner', translations: { he: { caption: 'מכולת' } } });
 
     go('#/admin/pages');
-    const site = screen.getByRole('region', { name: 'Site title' });
+    const site = screen.getByRole('region', { name: 'Site' });
     const siteTitle = (await within(site).findByLabelText('Title')) as HTMLInputElement;
     expect(siteTitle).toMatchObject({ value: '', placeholder: 'Memory', required: false });
     fireEvent.change(siteTitle, { target: { value: 'זיכרון' } });
-    fireEvent.click(within(site).getByRole('button', { name: 'Save site title' }));
-    expect(await within(site).findByRole('status')).toHaveProperty('textContent', 'Site title saved');
+    fireEvent.click(within(site).getByRole('button', { name: 'Save site settings' }));
+    expect(await within(site).findByRole('status')).toHaveProperty('textContent', 'Site settings saved');
     expect(server.site.translations).toEqual({ he: { title: 'זיכרון' } });
 
     const about = (await screen.findByLabelText('About text')) as HTMLTextAreaElement;
