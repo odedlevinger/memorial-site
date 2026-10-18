@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import type { ContentStatus, TopicKind, Translations } from '../interfaces/content.interfaces.js';
+import type { ContentStatus, GridColumns, TopicKind, Translations } from '../interfaces/content.interfaces.js';
 import { PictureEntity } from './picture.entity.js';
 
 @Entity('topics')
@@ -39,6 +39,10 @@ export class TopicEntity {
   /** Movie pages: the YouTube link. Shared by all languages. */
   @Column({ type: 'varchar', length: 500, nullable: true })
   videoUrl!: string | null;
+
+  /** Picture sets: how many pictures the website shows in one row (1–3). */
+  @Column({ type: 'smallint', default: 3 })
+  columns!: GridColumns;
 
   @Column({ type: 'uuid', nullable: true })
   coverPictureId!: string | null;

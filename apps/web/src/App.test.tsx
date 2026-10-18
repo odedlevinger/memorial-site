@@ -111,6 +111,29 @@ describe('public site', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('shows a picture set 1, 2 or 3 pictures per row, and the viewer links back to the main page', async () => {
+    const t = server.addTopic('Streets', 'published', 2);
+    render(<App />);
+    await screen.findAllByText('Streets');
+    go('#/galleries/streets');
+    await screen.findByRole('heading', { name: 'Streets' });
+    const grid = (): HTMLElement => screen.getAllByRole('list').find((l) => l.classList.contains('photo-grid')) as HTMLElement;
+    expect(grid().className).toBe('photo-grid cols-3');
+    const firstImg = (): string => (grid().querySelector('img') as HTMLImageElement).src;
+    expect(firstImg()).toMatch(/thumb/);
+
+    t.columns = 1;
+    go('#/');
+    await screen.findAllByText('Streets');
+    go('#/galleries/streets');
+    await waitFor(() => expect(grid().className).toBe('photo-grid cols-1'));
+    expect(firstImg()).toMatch(/display/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open photo 1' }));
+    const home = within(screen.getByRole('dialog')).getByRole('link', { name: '‹ Galleries' });
+    expect(home.getAttribute('href')).toBe('#/');
+  });
+
   it('shows not-found for unknown galleries and pages, and the text pages', async () => {
     render(<App />);
     await screen.findByText('No galleries yet.');

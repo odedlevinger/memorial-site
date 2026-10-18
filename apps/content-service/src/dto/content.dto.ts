@@ -14,7 +14,16 @@ import {
   ValidateBy,
   ValidateIf,
 } from 'class-validator';
-import { CONTENT_STATUSES, type ContentStatus, type Direction, DIRECTIONS, TOPIC_KINDS, type TopicKind } from '../interfaces/content.interfaces.js';
+import {
+  CONTENT_STATUSES,
+  type ContentStatus,
+  type Direction,
+  DIRECTIONS,
+  GRID_COLUMNS,
+  type GridColumns,
+  TOPIC_KINDS,
+  type TopicKind,
+} from '../interfaces/content.interfaces.js';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /** A YouTube page or short link (the web client turns it into a privacy-enhanced embed). */
@@ -104,6 +113,11 @@ export class UpdateTopicDto {
   @Matches(YOUTUBE_URL, { message: 'videoUrl must be a YouTube link (youtube.com/watch?v=…, youtu.be/…, or a shorts / embed / live link)' })
   @MaxLength(500)
   videoUrl?: string | null;
+
+  @ApiPropertyOptional({ enum: GRID_COLUMNS, description: 'picture sets: how many pictures the website shows in one row' })
+  @ValidateIf((_, v) => v !== undefined) // null is not a row width
+  @IsIn(GRID_COLUMNS)
+  columns?: GridColumns;
 
   @ApiPropertyOptional({ nullable: true, description: 'id of one of this topic’s pictures' })
   @IsOptional()

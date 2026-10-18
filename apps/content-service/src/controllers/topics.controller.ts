@@ -52,7 +52,7 @@ export class TopicsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Edit title, slug, description, page kind, text, book details, movie link, cover or publish status' })
+  @ApiOperation({ summary: 'Edit title, slug, description, page kind, text, book details, movie link, pictures per row, cover or publish status' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Updated topic' })
   @ApiResponse({ status: 400, description: 'Validation error / cover not in topic / unknown language' })

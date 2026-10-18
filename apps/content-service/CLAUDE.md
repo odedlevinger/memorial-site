@@ -34,7 +34,8 @@ src/
   re-encodes every derivative (drops EXIF/GPS). Never store an upload as-is.
 - **Page kinds**: a topic is a `pictures` set, a `text` page (body with `## heading`, `> quote`,
   `[photo <id> left|right]` lines) or a `book` (body + `details` + `buyUrl`/`buyLabel`) or a
-  `movie` (`videoUrl`, a YouTube link, + optional body).
+  `movie` (`videoUrl`, a YouTube link, + optional body). A picture set's `columns` (1–3, default 3)
+  is how many pictures the website shows per row.
 - **Public filtering**: only `published` topics are public; a `pictures` topic also needs ≥ 1
   `published` picture. Only published pictures are ever served publicly.
 - Every write calls `AuditService.record`.
