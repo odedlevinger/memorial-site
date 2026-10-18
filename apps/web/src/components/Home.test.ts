@@ -1,13 +1,17 @@
-import { rowSizes } from './Home';
+import { tileStarts } from './Home';
 
-describe('rowSizes', () => {
-  it('fills each row with its number of galleries, repeating the last row', () => {
-    expect(rowSizes(6, [1, 2])).toEqual([1, 2, 2, 2, 2, 2]);
-    expect(rowSizes(4, [3, 1])).toEqual([3, 3, 3, 1]);
-    expect(rowSizes(0, [2])).toEqual([]);
+describe('tileStarts', () => {
+  it('centres each row of same-size galleries, repeating the last row', () => {
+    expect(tileStarts(6, [1, 2])).toEqual([3, 2, 4, 2, 4, 3]);
+    expect(tileStarts(4, [3, 1])).toEqual([1, 3, 5, 3]);
+    expect(tileStarts(0, [2])).toEqual([]);
+  });
+
+  it('centres a last row that is not full', () => {
+    expect(tileStarts(5, [3])).toEqual([1, 3, 5, 2, 4]);
   });
 
   it('falls back to three per row when no rows are set', () => {
-    expect(rowSizes(4, [])).toEqual([3, 3, 3, 3]);
+    expect(tileStarts(4, [])).toEqual([1, 3, 5, 3]);
   });
 });

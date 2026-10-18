@@ -226,22 +226,17 @@ body {
 
 .tile-grid {
   display: grid;
-  /* six tracks so a row can hold 1, 2 or 3 galleries (each row's count is an admin setting) */
+  /* six tracks: every gallery is two wide, and a row of 1, 2 or 3 (an admin setting) is
+     centred by where its galleries start — see tileStarts() in Home.tsx */
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 2.25rem 1.75rem;
 }
 
-.tile-grid .per-row-1 {
-  grid-column: span 6;
-}
-
-.tile-grid .per-row-2 {
-  grid-column: span 3;
-}
-
-.tile-grid .per-row-3 {
-  grid-column: span 2;
-}
+.tile-grid .at-1 { grid-column: 1 / span 2; }
+.tile-grid .at-2 { grid-column: 2 / span 2; }
+.tile-grid .at-3 { grid-column: 3 / span 2; }
+.tile-grid .at-4 { grid-column: 4 / span 2; }
+.tile-grid .at-5 { grid-column: 5 / span 2; }
 
 .tile {
   display: block;
