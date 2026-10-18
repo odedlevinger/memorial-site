@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
-import { contentApi, type Topic } from '../content';
+import { contentApi, type Topic, type TopicKind } from '../content';
 import { hrefFor } from '../route';
+import { KIND_NAMES, KindSelect } from './KindSelect';
 import { Reorderable } from './Reorderable';
 import { errorText, useAsync } from './useAsync';
 
@@ -12,6 +13,7 @@ interface AdminTopicsProps {
 export function AdminTopics({ onChanged }: AdminTopicsProps): ReactElement {
   const topics = useAsync(contentApi.topics, 'topics');
   const [title, setTitle] = useState('');
+  const [kind, setKind] = useState<TopicKind>('pictures');
   const [error, setError] = useState<string | null>(null);
 
   const run = async (action: () => Promise<unknown>): Promise<void> => {
@@ -30,7 +32,7 @@ export function AdminTopics({ onChanged }: AdminTopicsProps): ReactElement {
     const t = title.trim();
     if (!t) return;
     void run(async () => {
-      const topic = await contentApi.createTopic(t);
+      const topic = await contentApi.createTopic(t, kind);
       setTitle('');
       window.location.hash = hrefFor({ page: 'admin-topic', id: topic.id });
     });
@@ -52,6 +54,7 @@ export function AdminTopics({ onChanged }: AdminTopicsProps): ReactElement {
       <h1 className="page-title">Topics</h1>
       <form className="admin-row" onSubmit={create}>
         <input aria-label="New topic title" placeholder="New topic title" value={title} maxLength={120} onChange={(e): void => setTitle(e.target.value)} />
+        <KindSelect aria-label="New topic kind" value={kind} onChange={setKind} />
         <button className="btn" type="submit" disabled={!title.trim()}>Add topic</button>
       </form>
       {shownError && <p className="error" role="alert">{shownError}</p>}
@@ -70,7 +73,7 @@ export function AdminTopics({ onChanged }: AdminTopicsProps): ReactElement {
             <>
               {t.cover ? <img className="admin-thumb" src={t.cover.thumb} alt="" /> : <span className="admin-thumb empty-thumb" />}
               <a className="admin-item-title" href={hrefFor({ page: 'admin-topic', id: t.id })}>{t.title}</a>
-              <span className="admin-meta">{t.pictureCount} pictures</span>
+              <span className="admin-meta">{KIND_NAMES[t.kind]} · {t.pictureCount} pictures</span>
               <button type="button" className={`status ${t.status}`} onClick={(): void => toggle(t)} aria-label={`${t.title}: ${t.status} — toggle`}>
                 {t.status === 'published' ? 'Published' : 'Draft'}
               </button>

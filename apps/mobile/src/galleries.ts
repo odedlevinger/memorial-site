@@ -19,6 +19,8 @@ export interface Picture {
 export interface Topic {
   readonly id: string;
   readonly slug: string;
+  /** Only picture sets are shown in the app; text and book pages live on the website. */
+  readonly kind?: 'pictures' | 'text' | 'book';
   readonly title: string;
   readonly description: string | null;
   readonly cover: PictureImages | null;
@@ -44,9 +46,10 @@ async function get<T>(origin: string, path: string, fallback: T): Promise<T> {
   }
 }
 
-/** Published topics; [] when the site is unreachable. */
-export function loadTopics(origin: string): Promise<readonly Topic[]> {
-  return get<readonly Topic[]>(origin, '/topics', []);
+/** Published picture sets; [] when the site is unreachable. */
+export async function loadTopics(origin: string): Promise<readonly Topic[]> {
+  const topics = await get<readonly Topic[]>(origin, '/topics', []);
+  return topics.filter((t) => (t.kind ?? 'pictures') === 'pictures');
 }
 
 /** One published topic with its pictures; null when missing or unreachable. */

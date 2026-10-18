@@ -12,7 +12,7 @@ describe('contentApi', () => {
     await contentApi.createTopic('Hello');
     expect(fetchMock).toHaveBeenCalledWith('/api/content/topics', {
       method: 'POST',
-      body: JSON.stringify({ title: 'Hello' }),
+      body: JSON.stringify({ title: 'Hello', kind: 'pictures' }),
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
     });

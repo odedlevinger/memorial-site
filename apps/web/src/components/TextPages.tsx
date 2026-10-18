@@ -78,7 +78,7 @@ export function PageText({ body }: { readonly body: string }): ReactElement {
 
 const LINK = /(https?:\/\/[^\s]+|[^\s@]+@[^\s@]+\.[^\s@]+)/g;
 
-function linkify(text: string): ReactNode[] {
+export function linkify(text: string): ReactNode[] {
   return text.split(LINK).map((part, i) => {
     if (i % 2 === 0) return part;
     const target = part.replace(/[.,;:!?)]+$/, '');

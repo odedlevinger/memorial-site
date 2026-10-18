@@ -5,6 +5,7 @@ import {
   IsEmail,
   IsIn,
   IsOptional,
+  IsUrl,
   IsString,
   IsUUID,
   Matches,
@@ -13,7 +14,7 @@ import {
   ValidateBy,
   ValidateIf,
 } from 'class-validator';
-import { CONTENT_STATUSES, type ContentStatus, type Direction, DIRECTIONS } from '../interfaces/content.interfaces.js';
+import { CONTENT_STATUSES, type ContentStatus, type Direction, DIRECTIONS, TOPIC_KINDS, type TopicKind } from '../interfaces/content.interfaces.js';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -30,6 +31,11 @@ export class CreateTopicDto {
   @IsString()
   @MaxLength(2000)
   description?: string | null;
+
+  @ApiPropertyOptional({ enum: TOPIC_KINDS, default: 'pictures' })
+  @IsOptional()
+  @IsIn(TOPIC_KINDS)
+  kind?: TopicKind;
 }
 
 export class UpdateTopicDto {
@@ -56,6 +62,39 @@ export class UpdateTopicDto {
   @IsOptional()
   @IsIn(CONTENT_STATUSES)
   status?: ContentStatus;
+
+  @ApiPropertyOptional({ enum: TOPIC_KINDS })
+  @IsOptional()
+  @IsIn(TOPIC_KINDS)
+  kind?: TopicKind;
+
+  @ApiPropertyOptional({ maxLength: 20000, nullable: true, description: 'text / book pages; see TopicDetailView.body for the markup' })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  @MaxLength(20000)
+  body?: string | null;
+
+  @ApiPropertyOptional({ maxLength: 2000, nullable: true, description: 'book pages: "Label: value" lines' })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  @MaxLength(2000)
+  details?: string | null;
+
+  @ApiPropertyOptional({ maxLength: 500, nullable: true, description: 'book pages: http(s) link for the buy button' })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  @MaxLength(500)
+  buyUrl?: string | null;
+
+  @ApiPropertyOptional({ maxLength: 60, nullable: true, description: 'book pages: buy button text' })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  @MaxLength(60)
+  buyLabel?: string | null;
 
   @ApiPropertyOptional({ nullable: true, description: 'id of one of this topic’s pictures' })
   @IsOptional()

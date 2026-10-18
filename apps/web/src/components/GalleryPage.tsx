@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { contentApi, type Picture, type TopicDetail } from '../content';
 import { useI18n } from '../i18n';
 import { Lightbox } from './Lightbox';
+import { RichText } from './RichText';
 import { NotFound } from './TextPages';
 
 interface GalleryPageProps {
@@ -31,6 +32,8 @@ export function GalleryPage({ slug }: GalleryPageProps): ReactElement {
   if (state.status === 'loading') return <p className="empty">{t('site.loading')}</p>;
   if (state.status === 'missing') return <NotFound />;
   const { topic } = state;
+  if (topic.kind === 'text') return <TextTopic topic={topic} />;
+  if (topic.kind === 'book') return <BookTopic topic={topic} />;
 
   return (
     <section className="gallery" aria-labelledby="gallery-title">
@@ -127,5 +130,88 @@ function Chevron(): ReactElement {
     <svg viewBox="0 0 16 32" width="16" height="32" aria-hidden="true">
       <polyline points="2,2 14,16 2,30" fill="none" stroke="currentColor" strokeWidth="1.5" />
     </svg>
+  );
+}
+
+/** Opens the full-screen viewer on one of `pictures`; render `viewer` somewhere on the page. */
+function useViewer(title: string, pictures: readonly Picture[]): { open: (p: Picture) => void; viewer: ReactElement | null } {
+  const [index, setIndex] = useState<number | null>(null);
+  return {
+    open: (p): void => setIndex(pictures.indexOf(p)),
+    viewer:
+      index === null ? null : (
+        <Lightbox title={title} pictures={pictures} index={index} onIndexChange={setIndex} onClose={(): void => setIndex(null)} />
+      ),
+  };
+}
+
+/** An illustrated text: headings, paragraphs, pull quotes and photographs in one column. */
+function TextTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
+  const { open, viewer } = useViewer(topic.title, topic.pictures);
+  return (
+    <article className="text-topic" aria-labelledby="gallery-title">
+      <h1 id="gallery-title" className="page-title">{topic.title}</h1>
+      {topic.description && <p className="text-topic-intro">{topic.description}</p>}
+      {topic.body && <RichText body={topic.body} pictures={topic.pictures} onOpen={open} />}
+      {viewer}
+    </article>
+  );
+}
+
+/** A book: its cover, title, text, a details table, a buy button, then any other photographs. */
+function BookTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
+  const { t } = useI18n();
+  const { open, viewer } = useViewer(topic.title, topic.pictures);
+  const cover = topic.pictures.find((p) => p.id === topic.coverPictureId) ?? topic.pictures[0];
+  const more = topic.pictures.filter((p) => p !== cover);
+  const details = (topic.details ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const at = line.indexOf(':');
+      return at > 0 ? { label: line.slice(0, at).trim(), value: line.slice(at + 1).trim() } : { label: '', value: line };
+    });
+
+  return (
+    <article className="book" aria-labelledby="gallery-title">
+      {cover && (
+        <button type="button" className="book-cover" onClick={(): void => open(cover)} aria-label={t('gallery.openPhoto', { n: 1 })}>
+          <img src={cover.images.display} alt={cover.caption ?? ''} />
+        </button>
+      )}
+      <h1 id="gallery-title" className="page-title">{topic.title}</h1>
+      {topic.description && <p className="book-subtitle">{topic.description}</p>}
+      {topic.body && <RichText body={topic.body} pictures={topic.pictures} onOpen={open} />}
+      {details.length > 0 && (
+        <dl className="book-details">
+          {details.map((d, i) => (
+            <div key={i}>
+              {d.label && <dt>{d.label}</dt>}
+              <dd>{d.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {topic.buyUrl && (
+        <p className="book-buy">
+          <a className="buy-button" href={topic.buyUrl} target="_blank" rel="noopener noreferrer">
+            {topic.buyLabel || t('book.buy')}
+          </a>
+        </p>
+      )}
+      {more.length > 0 && (
+        <ul className="book-more">
+          {more.map((p) => (
+            <li key={p.id}>
+              <button type="button" className="thumb" onClick={(): void => open(p)} aria-label={t('gallery.showPhoto', { n: topic.pictures.indexOf(p) + 1 })}>
+                <img src={p.images.thumb} alt="" loading="lazy" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {viewer}
+    </article>
   );
 }

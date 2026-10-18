@@ -226,6 +226,101 @@ describe('topic page', () => {
   });
 });
 
+describe('text and book topics', () => {
+  it('creates a topic of a chosen kind and lists its kind', async () => {
+    server.addTopic('Streets', 'published', 1);
+    await openAdmin();
+    expect(await screen.findByText('Picture set · 1 pictures')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('New topic title'), { target: { value: 'Her life' } });
+    fireEvent.change(screen.getByLabelText('New topic kind'), { target: { value: 'text' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add topic' }));
+    await waitFor(() => expect(window.location.hash).toMatch(/^#\/admin\/topics\//));
+    expect(server.topics[1]).toMatchObject({ title: 'Her life', kind: 'text' });
+  });
+
+  it('writes a text page, inserts pictures at the cursor and keeps unsaved text across uploads', async () => {
+    const t = server.addTopic('Her life', 'draft', 2, 'text');
+    const [p1, p2] = server.pictures;
+    await openAdmin(`#/admin/topics/${t.id}`);
+
+    expect(await screen.findByLabelText('Introduction')).toBeTruthy();
+    expect(screen.queryByLabelText('Book details')).toBeNull();
+    const text = screen.getByLabelText('Text') as HTMLTextAreaElement;
+    fireEvent.change(text, { target: { value: 'First.\n\nSecond.' } });
+
+    // insert at the cursor, between the paragraphs
+    text.setSelectionRange(7, 7);
+    fireEvent.click(screen.getByRole('button', { name: 'Insert picture 2 in text' }));
+    const ref2 = `[photo ${p2!.id.slice(0, 8)}]`;
+    expect(text.value).toBe(`First.\n\n${ref2}\n\nSecond.`);
+    expect(screen.getByRole('status').textContent).toBe(`Added ${ref2} to the text — save to keep it`);
+
+    // an upload reloads the topic but leaves the unsaved text alone
+    fireEvent.change(screen.getByLabelText('Upload pictures'), { target: { files: [jpg('a.jpg')] } });
+    expect(await screen.findByText('Uploaded 1 picture as drafts')).toBeTruthy();
+    expect((screen.getByLabelText('Text') as HTMLTextAreaElement).value).toBe(`First.\n\n${ref2}\n\nSecond.`);
+
+    // into an empty text, at the very start
+    fireEvent.change(text, { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Insert picture 1 in text' }));
+    expect(text.value).toBe(`[photo ${p1!.id.slice(0, 8)}]`);
+    fireEvent.change(text, { target: { value: 'Final text' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save topic' }));
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Saved');
+    expect(t).toMatchObject({ body: 'Final text', kind: 'text' });
+    expect(server.urls.filter((u) => u.startsWith('PATCH'))).toHaveLength(1);
+
+    // clearing the text stores none; switching to a picture set hides the text fields
+    fireEvent.change(screen.getByLabelText('Text'), { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save topic' }));
+    await waitFor(() => expect(t.body).toBeNull());
+    fireEvent.change(screen.getByLabelText('Page kind'), { target: { value: 'pictures' } });
+    expect(screen.queryByLabelText('Text')).toBeNull();
+    expect(screen.queryByRole('button', { name: /in text$/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Save topic' }));
+    await waitFor(() => expect(t.kind).toBe('pictures'));
+    expect(screen.getByLabelText('Description')).toBeTruthy();
+  });
+
+  it('edits a book: about text, details, buy link and button text, in two languages', async () => {
+    server.addLanguage('he', 'עברית', 'rtl');
+    const t = server.addTopic('The book', 'draft', 1, 'book');
+    await openAdmin(`#/admin/topics/${t.id}`);
+
+    fireEvent.change(await screen.findByLabelText('About the book'), { target: { value: 'A monograph.' } });
+    expect((screen.getByLabelText('Buy button text') as HTMLInputElement).placeholder).toBe('Buy');
+    fireEvent.change(screen.getByLabelText('Book details'), { target: { value: 'Pages: 288' } });
+    fireEvent.change(screen.getByLabelText('Buy link'), { target: { value: ' https://shop.example/b ' } });
+    fireEvent.change(screen.getByLabelText('Buy button text'), { target: { value: 'Order' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save topic' }));
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Saved');
+    expect(t).toMatchObject({ body: 'A monograph.', details: 'Pages: 288', buyUrl: 'https://shop.example/b', buyLabel: 'Order' });
+
+    fireEvent.change(screen.getByLabelText('Editing language'), { target: { value: 'he' } });
+    const details = screen.getByLabelText('Book details') as HTMLTextAreaElement;
+    expect(details).toMatchObject({ value: '', placeholder: 'Pages: 288', dir: 'rtl' });
+    expect((screen.getByLabelText('Buy button text') as HTMLInputElement).placeholder).toBe('Order');
+    expect((screen.getByLabelText('About the book') as HTMLTextAreaElement).placeholder).toBe('A monograph.');
+    expect((screen.getByLabelText('Buy link') as HTMLInputElement).value).toBe('https://shop.example/b');
+    fireEvent.change(details, { target: { value: 'עמודים: 288' } });
+    fireEvent.change(screen.getByLabelText('Buy link'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save topic' }));
+    await waitFor(() => expect(t.translations['he']).toMatchObject({ details: 'עמודים: 288' }));
+    expect(t).toMatchObject({ details: 'Pages: 288', buyUrl: null, buyLabel: 'Order' });
+  });
+
+  it('shows the book placeholders for an untranslated, empty book', async () => {
+    server.addLanguage('he', 'עברית', 'rtl');
+    const t = server.addTopic('Bare', 'draft', 0, 'book');
+    await openAdmin(`#/admin/topics/${t.id}`);
+    fireEvent.change(await screen.findByLabelText('Editing language'), { target: { value: 'he' } });
+    expect((await screen.findByLabelText('Book details') as HTMLTextAreaElement).placeholder).toMatch(/^Author: /);
+    expect((screen.getByLabelText('Buy button text') as HTMLInputElement).placeholder).toBe('Buy');
+    expect((screen.getByLabelText('About the book') as HTMLTextAreaElement).placeholder).toBe('');
+  });
+});
+
 describe('editors', () => {
   it('owner sees themselves as owner (no Remove), invites and removes editors', async () => {
     await openAdmin('#/admin/editors');

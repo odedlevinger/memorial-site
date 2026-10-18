@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactElement } from 'react';
-import { contentApi, type ContentStatus, type Language, type Picture, type TopicDetail } from '../content';
+import { contentApi, type ContentStatus, type Language, type Picture, type TopicDetail, type TopicKind } from '../content';
+import { photoRef } from '../components/RichText';
 import { hrefFor } from '../route';
+import { KindSelect } from './KindSelect';
 import { PictureEditor } from './PictureEditor';
 import { Reorderable } from './Reorderable';
 import { inputLang, textIn } from './translation';
@@ -17,16 +19,28 @@ interface AdminTopicProps {
 interface Fields {
   title: string;
   slug: string;
+  kind: TopicKind;
   description: string;
+  body: string;
+  details: string;
+  buyUrl: string;
+  buyLabel: string;
   status: ContentStatus;
 }
 
 const fieldsOf = (t: TopicDetail, lang: Language): Fields => ({
   title: textIn(t, 'title', t.title, lang),
   slug: t.slug,
+  kind: t.kind,
   description: textIn(t, 'description', t.description, lang),
+  body: textIn(t, 'body', t.body, lang),
+  details: textIn(t, 'details', t.details, lang),
+  buyUrl: t.buyUrl ?? '',
+  buyLabel: textIn(t, 'buyLabel', t.buyLabel, lang),
   status: t.status,
 });
+
+const orNull = (s: string): string | null => (s.trim() ? s : null);
 
 export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactElement {
   const topic = useAsync(() => contentApi.topic(id), id);
@@ -36,9 +50,16 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [upload, setUpload] = useState<{ done: number; total: number } | null>(null);
+  const bodyBox = useRef<HTMLTextAreaElement>(null);
+  /** Unsaved edits survive reloads (an upload, a new cover) until saved or the language changes. */
+  const dirty = useRef(false);
+  const shownLang = useRef(lang.code);
 
   useEffect(() => {
-    if (topic.data) setFields(fieldsOf(topic.data, lang));
+    if (!topic.data || (dirty.current && shownLang.current === lang.code)) return;
+    dirty.current = false;
+    shownLang.current = lang.code;
+    setFields(fieldsOf(topic.data, lang));
   }, [topic.data, lang]);
 
   const run = async (action: () => Promise<unknown>, done?: string): Promise<boolean> => {
@@ -64,15 +85,23 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
 
   const save = (e: FormEvent): void => {
     e.preventDefault();
-    void run(
-      () =>
-        contentApi.updateTopic(
-          id,
-          { title: fields.title, slug: fields.slug, description: fields.description || null, status: fields.status },
-          lang.code,
-        ),
-      'Saved',
-    );
+    const book = fields.kind === 'book';
+    void run(async () => {
+      await contentApi.updateTopic(
+        id,
+        {
+          title: fields.title,
+          slug: fields.slug,
+          kind: fields.kind,
+          description: fields.description || null,
+          ...(fields.kind !== 'pictures' ? { body: orNull(fields.body) } : {}),
+          ...(book ? { details: orNull(fields.details), buyUrl: fields.buyUrl.trim() || null, buyLabel: orNull(fields.buyLabel) } : {}),
+          status: fields.status,
+        },
+        lang.code,
+      );
+      dirty.current = false;
+    }, 'Saved');
   };
 
   const remove = (): void => {
@@ -95,7 +124,23 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
     }, `Uploaded ${files.length} picture${files.length === 1 ? '' : 's'} as drafts`).finally(() => setUpload(null));
   };
 
-  const set = <K extends keyof Fields>(k: K, v: Fields[K]): void => setFields({ ...fields, [k]: v });
+  const set = <K extends keyof Fields>(k: K, v: Fields[K]): void => {
+    dirty.current = true;
+    setFields({ ...fields, [k]: v });
+  };
+
+  /** Puts a picture into the text at the cursor, on a line of its own. */
+  const insertPhoto = (p: Picture): void => {
+    const box = bodyBox.current as HTMLTextAreaElement; // shown whenever the insert buttons are
+    const at = box.selectionStart;
+    const before = fields.body.slice(0, at).replace(/\s*$/, '');
+    const after = fields.body.slice(at).replace(/^\s*/, '');
+    const tag = `[photo ${photoRef(p)}]`;
+    set('body', [before, tag, after].filter(Boolean).join('\n\n'));
+    setMessage(`Added ${tag} to the text — save to keep it`);
+  };
+  const hasText = fields.kind !== 'pictures';
+  const hint = (base: string | null): string | undefined => (lang.isDefault ? undefined : (base ?? undefined));
 
   return (
     <div>
@@ -103,7 +148,30 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
       <form className="admin-form" onSubmit={save}>
         <label>Title<input value={fields.title} maxLength={120} required={lang.isDefault} placeholder={lang.isDefault ? undefined : t.title} {...inputLang(lang)} onChange={(e): void => set('title', e.target.value)} /></label>
         <label>Web address<input value={fields.slug} maxLength={140} required pattern="[a-z0-9]+(-[a-z0-9]+)*" onChange={(e): void => set('slug', e.target.value)} /></label>
-        <label>Description<textarea value={fields.description} maxLength={2000} rows={3} placeholder={lang.isDefault ? undefined : (t.description ?? undefined)} {...inputLang(lang)} onChange={(e): void => set('description', e.target.value)} /></label>
+        <label>Page kind<KindSelect value={fields.kind} onChange={(k): void => set('kind', k)} /></label>
+        <label>{hasText ? 'Introduction' : 'Description'}<textarea value={fields.description} maxLength={2000} rows={3} placeholder={hint(t.description)} {...inputLang(lang)} onChange={(e): void => set('description', e.target.value)} /></label>
+        {hasText && (
+          <>
+            <label>{fields.kind === 'book' ? 'About the book' : 'Text'}
+              <textarea ref={bodyBox} className="body-editor" value={fields.body} maxLength={20000} rows={16} placeholder={hint(t.body)} {...inputLang(lang)} onChange={(e): void => set('body', e.target.value)} />
+            </label>
+            <p className="admin-help">
+              Blank line = new paragraph · <code>## Heading</code> · <code>&gt; Quote</code> · a picture on its own line:{' '}
+              <code>[photo …]</code> (use “Insert in text” below; add <code>left</code> or <code>right</code> before the <code>]</code> to set it beside
+              the text, or several picture codes to show them side by side). Pictures appear only once published.
+            </p>
+          </>
+        )}
+        {fields.kind === 'book' && (
+          <>
+            <label>Book details
+              <textarea value={fields.details} maxLength={2000} rows={6} placeholder={hint(t.details) ?? 'Author: …\nPublisher: …\nPages: …\nISBN: …'} {...inputLang(lang)} onChange={(e): void => set('details', e.target.value)} />
+            </label>
+            <p className="admin-help">One “Label: value” per line. The cover picture is shown as the book’s cover.</p>
+            <label>Buy link<input type="url" value={fields.buyUrl} maxLength={500} placeholder="https://…" onChange={(e): void => set('buyUrl', e.target.value)} /></label>
+            <label>Buy button text<input value={fields.buyLabel} maxLength={60} placeholder={hint(t.buyLabel) ?? 'Buy'} {...inputLang(lang)} onChange={(e): void => set('buyLabel', e.target.value)} /></label>
+          </>
+        )}
         <label>Status
           <select value={fields.status} onChange={(e): void => set('status', e.target.value as ContentStatus)}>
             <option value="draft">Draft (hidden)</option>
@@ -142,6 +210,11 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
               </button>
               <span className="admin-pic-meta">
                 <span className={`status ${p.status}`}>{p.status === 'published' ? 'Published' : 'Draft'}</span>
+                {hasText && (
+                  <button type="button" className="link" onClick={(): void => insertPhoto(p)} aria-label={`Insert ${p.caption ?? `picture ${p.position + 1}`} in text`}>
+                    Insert in text
+                  </button>
+                )}
                 {coverId === p.id ? (
                   <span className="cover-badge">Cover</span>
                 ) : (

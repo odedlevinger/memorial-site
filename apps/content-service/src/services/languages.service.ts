@@ -14,7 +14,7 @@ import { type FieldSpec, switchDefault, type Translatable } from './translations
 /** The site's only language until an editor adds another. */
 export const BUILT_IN_LANGUAGE: LanguageView = { code: 'en', name: 'English', direction: 'ltr', isDefault: true, labels: {} };
 
-const TOPIC_FIELDS: FieldSpec<TopicEntity> = { title: false, description: true };
+const TOPIC_FIELDS: FieldSpec<TopicEntity> = { title: false, description: true, body: true, details: true, buyLabel: true };
 const PICTURE_FIELDS: FieldSpec<PictureEntity> = { caption: true, dateText: true, place: true, story: true };
 const PAGE_FIELDS: FieldSpec<PageEntity> = { body: false };
 const SITE_FIELDS: FieldSpec<SiteEntity> = { title: false, tagline: false };

@@ -1,5 +1,5 @@
 // Test-only in-memory stand-in for /api/content and /api/auth (excluded from coverage).
-import type { ContentStatus, Editor, Language, Page, Picture, Role, SiteInfo, Topic, TopicDetail } from '../content';
+import type { ContentStatus, Editor, TopicKind, Language, Page, Picture, Role, SiteInfo, Topic, TopicDetail } from '../content';
 
 type Tr = Record<string, Record<string, string>>;
 interface Lang {
@@ -10,8 +10,13 @@ interface Lang {
 interface TopicRow {
   id: string;
   slug: string;
+  kind: TopicKind;
   title: string;
   description: string | null;
+  body: string | null;
+  details: string | null;
+  buyUrl: string | null;
+  buyLabel: string | null;
   status: ContentStatus;
   coverPictureId: string | null;
   translations: Tr;
@@ -72,9 +77,8 @@ export class FakeServer {
     this.languages.push({ code, name, direction, isDefault: false, labels });
   }
 
-  addTopic(title: string, status: ContentStatus = 'published', pictureCount = 2): TopicRow {
-    const t: TopicRow = { id: uid(), slug: title.toLowerCase().replace(/\s+/g, '-'), title, description: null, status, coverPictureId: null, translations: {} };
-    this.topics.push(t);
+  addTopic(title: string, status: ContentStatus = 'published', pictureCount = 2, kind: TopicKind = 'pictures'): TopicRow {
+    const t = this.newTopic(title.toLowerCase().replace(/\s+/g, '-'), title, kind, status);
     for (let i = 0; i < pictureCount; i++) this.addPicture(t.id, status);
     return t;
   }
@@ -83,6 +87,15 @@ export class FakeServer {
     const p: PictureRow = { id: uid(), topicId, caption, dateText: null, place: null, story: null, status, version: 1, translations: {} };
     this.pictures.push(p);
     return p;
+  }
+
+  private newTopic(slug: string, title: string, kind: TopicKind, status: ContentStatus): TopicRow {
+    const t: TopicRow = {
+      id: uid(), slug, kind, title, description: null, body: null, details: null, buyUrl: null, buyLabel: null,
+      status, coverPictureId: null, translations: {},
+    };
+    this.topics.push(t);
+    return t;
   }
 
   readonly fetch = async (input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> => {
@@ -180,8 +193,7 @@ export class FakeServer {
     }
     if (p === '/topics' && method === 'GET') return this.json(this.topics.map((t) => this.view(t, false)));
     if (p === '/topics' && method === 'POST') {
-      const t: TopicRow = { id: uid(), slug: String(body['title']).toLowerCase(), title: String(body['title']), description: null, status: 'draft', coverPictureId: null, translations: {} };
-      this.topics.push(t);
+      const t = this.newTopic(String(body['title']).toLowerCase(), String(body['title']), (body['kind'] as TopicKind | undefined) ?? 'pictures', 'draft');
       return this.json(this.detail(t, false), 201);
     }
     if (p === '/topics/order' && method === 'PUT') {
@@ -213,10 +225,12 @@ export class FakeServer {
         return new Response(null, { status: 204 });
       }
       if (method === 'PATCH') {
-        const { title, description, ...shared } = body;
+        const { title, description, body: text, details, buyLabel, ...shared } = body;
         Object.assign(t, shared);
         if (title !== undefined) t.title = this.write(t, 'title', String(title), t.title);
-        if (description !== undefined) t.description = this.write(t, 'description', description as string | null, t.description);
+        for (const [field, value] of Object.entries({ description, body: text, details, buyLabel })) {
+          if (value !== undefined) t[field as 'body'] = this.write(t, field, value as string | null, t[field as 'body']);
+        }
       }
       return this.json(this.detail(t, false));
     }
@@ -313,7 +327,9 @@ export class FakeServer {
   }
 
   private publicTopics(): Topic[] {
-    return this.topics.filter((t) => t.status === 'published' && this.picturesOf(t.id, true).length > 0).map((t) => this.view(t, true));
+    return this.topics
+      .filter((t) => t.status === 'published' && (t.kind !== 'pictures' || this.picturesOf(t.id, true).length > 0))
+      .map((t) => this.view(t, true));
   }
 
   private pictureView(x: PictureRow): Picture {
@@ -335,8 +351,9 @@ export class FakeServer {
   private view(t: TopicRow, publishedOnly: boolean): Topic {
     const pics = this.picturesOf(t.id, publishedOnly);
     const cover = pics.find((x) => x.id === t.coverPictureId) ?? pics[0];
+    const { body: _b, details: _d, buyUrl: _u, buyLabel: _l, ...row } = t;
     return {
-      ...t,
+      ...row,
       title: this.text(t, 'title', t.title),
       description: this.text(t, 'description', t.description),
       position: this.topics.indexOf(t),
@@ -346,7 +363,14 @@ export class FakeServer {
   }
 
   private detail(t: TopicRow, publishedOnly: boolean): TopicDetail {
-    return { ...this.view(t, publishedOnly), pictures: this.picturesOf(t.id, publishedOnly).map((x) => this.pictureView(x)) };
+    return {
+      ...this.view(t, publishedOnly),
+      pictures: this.picturesOf(t.id, publishedOnly).map((x) => this.pictureView(x)),
+      body: this.text(t, 'body', t.body),
+      details: this.text(t, 'details', t.details),
+      buyUrl: t.buyUrl,
+      buyLabel: this.text(t, 'buyLabel', t.buyLabel),
+    };
   }
 
   private json(body: unknown, status = 200): Response {

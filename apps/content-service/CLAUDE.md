@@ -32,7 +32,10 @@ src/
   Every write endpoint is guarded; public reads live only under `/content/public/*`.
 - **Images**: always go through `ImagesService.store` — it validates type/size and
   re-encodes every derivative (drops EXIF/GPS). Never store an upload as-is.
-- **Public filtering**: only `published` topics with ≥ 1 `published` picture are public.
+- **Page kinds**: a topic is a `pictures` set, a `text` page (body with `## heading`, `> quote`,
+  `[photo <id> left|right]` lines) or a `book` (body + `details` + `buyUrl`/`buyLabel`).
+- **Public filtering**: only `published` topics are public; a `pictures` topic also needs ≥ 1
+  `published` picture. Only published pictures are ever served publicly.
 - Every write calls `AuditService.record`.
 - **Languages**: translatable text lives in the row's own columns (the default language)
   plus a `translations` JSON column (code → field → text). Read with `textOf`, write with
