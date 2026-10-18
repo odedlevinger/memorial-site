@@ -16,7 +16,6 @@ beforeEach(() => {
   server = new FakeServer();
   vi.stubGlobal('fetch', server.fetch);
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
-  Element.prototype.scrollIntoView = vi.fn(); // jsdom has none
   publicRetry.backoffMs = 0;
   window.location.hash = '#/';
   window.localStorage.clear();
@@ -28,16 +27,15 @@ afterEach(() => {
 });
 
 describe('public site', () => {
-  it('lists published topics, and keeps the back office out of the menu even for an owner', async () => {
+  it('lists published topics and shows an owner the Admin link', async () => {
     server.addTopic('Streets');
     server.addTopic('Hidden', 'draft');
     render(<App />);
     const nav = await screen.findByRole('navigation', { name: 'Main' });
-    fireEvent.click(within(nav).getByRole('button', { name: 'Galleries' }));
     expect(within(nav).getByRole('link', { name: 'Streets' })).toBeTruthy();
     expect(within(nav).queryByRole('link', { name: 'Hidden' })).toBeNull();
-    expect(await within(nav).findByRole('link', { name: 'Account' })).toBeTruthy();
-    expect(within(nav).queryByRole('link', { name: 'Admin' })).toBeNull();
+    expect(await within(nav).findByRole('link', { name: 'Admin' })).toBeTruthy();
+    expect(within(nav).getByRole('link', { name: 'Account' })).toBeTruthy();
   });
 
   it('shows an empty state and Sign in for visitors when nothing is published', async () => {
@@ -53,7 +51,6 @@ describe('public site', () => {
     server.failNext(/GET \/api\/content\/public\/topics$/, 503);
     render(<App />);
     const nav = await screen.findByRole('navigation', { name: 'Main' });
-    fireEvent.click(within(nav).getByRole('button', { name: 'Galleries' }));
     expect(await within(nav).findByRole('link', { name: 'Streets' })).toBeTruthy();
   });
 
@@ -77,21 +74,6 @@ describe('public site', () => {
     expect(await screen.findByRole('heading', { name: 'Streets' })).toBeTruthy();
     expect(screen.getByText('Walks around town')).toBeTruthy();
 
-    // The stage: one photograph with its caption, arrows and thumbnails.
-    expect(screen.getByText('Corner shop')).toBeTruthy();
-    expect(screen.getByText('1974 · Haifa')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Next photo' }));
-    expect(screen.queryByText('Corner shop')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Show photo 2' }).getAttribute('aria-current')).toBe('true');
-    fireEvent.keyDown(window, { key: 'ArrowRight' });
-    fireEvent.keyDown(window, { key: 'Enter' });
-    expect(screen.getByText('Corner shop')).toBeTruthy();
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    fireEvent.click(screen.getByRole('button', { name: 'Previous photo' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Show photo 1' }));
-    expect(screen.getByText('Corner shop')).toBeTruthy();
-
-    // The full-screen viewer, opened from the stage, has the story too.
     fireEvent.click(screen.getByRole('button', { name: 'Open photo 1' }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('Corner shop')).toBeTruthy();
@@ -102,12 +84,12 @@ describe('public site', () => {
     expect(within(screen.getByRole('dialog')).queryByText('Corner shop')).toBeNull();
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Previous photo' }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Next photo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Previous photo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next photo' }));
     fireEvent.keyDown(window, { key: 'Enter' });
     expect(screen.getByRole('dialog').getAttribute('aria-label')).toBe('Streets — photo 2 of 2');
 
-    const figure = within(screen.getByRole('dialog')).getByRole('figure');
+    const figure = screen.getByRole('figure');
     const swipe = (from: number, to: number): void => {
       fireEvent.touchStart(figure, { touches: [{ clientX: from }] });
       fireEvent.touchEnd(figure, { changedTouches: [{ clientX: to }] });
@@ -122,32 +104,11 @@ describe('public site', () => {
     fireEvent.touchEnd(figure, { changedTouches: [] });
     expect(screen.getByRole('dialog').getAttribute('aria-label')).toBe('Streets — photo 2 of 2');
 
-    // Closing leaves the stage on the photograph last viewed.
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Open photo 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open photo 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('dialog')).toBeNull();
-  });
-
-  it('shows a lone photograph without arrows or thumbnails, and an emptied gallery without a stage', async () => {
-    const t = server.addTopic('Streets', 'published', 0);
-    server.addPicture(t.id, 'published');
-    server.addTopic('Empty', 'published', 1);
-    // Its last photograph is unpublished between the menu loading and the gallery opening.
-    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-      const res = await server.fetch(input, init);
-      if (!String(input).includes('/public/topics/empty')) return res;
-      return new Response(JSON.stringify({ ...(await res.json()), pictures: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    });
-    window.location.hash = '#/galleries/streets';
-    render(<App />);
-    expect(await screen.findByRole('button', { name: 'Open photo 1' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Next photo' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Show photo 1' })).toBeNull();
-    go('#/galleries/empty');
-    expect(await screen.findByRole('heading', { name: 'Empty' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Open photo 1' })).toBeNull();
   });
 
   it('shows not-found for unknown galleries and pages, and the text pages', async () => {
@@ -405,7 +366,7 @@ describe('languages', () => {
     for (let i = 0; i < publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/languages$/, 503);
     render(<App />);
     const nav = await screen.findByRole('navigation', { name: 'Main' });
-    expect(within(nav).getByRole('button', { name: 'Galleries' })).toBeTruthy();
+    expect(within(nav).getByRole('link', { name: 'Galleries' })).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'Language' })).toBeNull();
   });
 
@@ -425,8 +386,8 @@ describe('languages', () => {
     expect(within(switcher).queryByRole('button', { name: 'English' })).toBeNull(); // lists the others
     fireEvent.click(within(switcher).getByRole('button', { name: 'עברית' }));
     const nav = await screen.findByRole('navigation', { name: 'ראשי' });
-    fireEvent.click(within(nav).getByRole('button', { name: 'גלריות' }));
     expect(await within(nav).findByRole('link', { name: 'רחובות' })).toBeTruthy();
+    expect(within(nav).getByRole('link', { name: 'גלריות' })).toBeTruthy();
     expect(await screen.findByRole('link', { name: 'זיכרון' })).toBeTruthy();
     expect(document.documentElement).toMatchObject({ dir: 'rtl', lang: 'he' });
     expect(server.urls).toContain('GET /api/content/public/topics?lang=he');
@@ -469,11 +430,6 @@ describe('languages', () => {
 
     expect(await screen.findByRole('heading', { name: 'רחובות' })).toBeTruthy();
     expect(server.urls).toContain('GET /api/content/public/topics/streets?lang=he');
-    const current = (): string | null => screen.getByRole('button', { name: 'הצגת תמונה 2' }).getAttribute('aria-current');
-    fireEvent.keyDown(window, { key: 'ArrowLeft' }); // the stage too: next, in right-to-left
-    expect(current()).toBe('true');
-    fireEvent.keyDown(window, { key: 'ArrowRight' });
-    expect(current()).toBe('false');
     fireEvent.click(screen.getByRole('button', { name: 'פתיחת תמונה 1' }));
     const label = (): string | null => screen.getByRole('dialog').getAttribute('aria-label');
     expect(label()).toBe('רחובות — תמונה 1 מתוך 2');
@@ -482,7 +438,7 @@ describe('languages', () => {
     expect(label()).toBe('רחובות — תמונה 2 מתוך 2');
     fireEvent.keyDown(window, { key: 'ArrowRight' });
     expect(label()).toBe('רחובות — תמונה 1 מתוך 2');
-    const figure = within(screen.getByRole('dialog')).getByRole('figure');
+    const figure = screen.getByRole('figure');
     fireEvent.touchStart(figure, { touches: [{ clientX: 100 }] });
     fireEvent.touchEnd(figure, { changedTouches: [{ clientX: 300 }] }); // swipe right = next
     expect(label()).toBe('רחובות — תמונה 2 מתוך 2');
