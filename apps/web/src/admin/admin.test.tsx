@@ -310,6 +310,21 @@ describe('text and book topics', () => {
     expect(t).toMatchObject({ details: 'Pages: 288', buyUrl: null, buyLabel: 'Order' });
   });
 
+  it('sets how many pictures a picture set shows per row', async () => {
+    const t = server.addTopic('Streets', 'draft', 1);
+    await openAdmin(`#/admin/topics/${t.id}`);
+    const three = await screen.findByRole('radio', { name: '3' });
+    expect((three as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByRole('radio', { name: '1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save topic' }));
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Saved');
+    expect(t.columns).toBe(1);
+    expect((screen.getByRole('radio', { name: '1' }) as HTMLInputElement).checked).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('Page kind'), { target: { value: 'text' } });
+    expect(screen.queryByRole('group', { name: 'Pictures per row' })).toBeNull();
+  });
+
   it('edits a movie: YouTube link (checked as you type) and optional text', async () => {
     const t = server.addTopic('Home movie', 'draft', 0, 'movie');
     await openAdmin(`#/admin/topics/${t.id}`);

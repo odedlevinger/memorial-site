@@ -40,7 +40,7 @@ export function GalleryPage({ slug }: GalleryPageProps): ReactElement {
   return <PictureSet topic={topic} />;
 }
 
-/** A picture set: a grid of photographs, each opening the full-screen viewer. */
+/** A picture set: a grid of 1–3 photographs per row, each opening the full-screen viewer. */
 function PictureSet({ topic }: { readonly topic: TopicDetail }): ReactElement {
   const { t } = useI18n();
   const { open, viewer } = useViewer(topic.title, topic.pictures);
@@ -51,11 +51,12 @@ function PictureSet({ topic }: { readonly topic: TopicDetail }): ReactElement {
       </p>
       <h1 id="gallery-title" className="page-title">{topic.title}</h1>
       {topic.description && <p className="gallery-intro">{topic.description}</p>}
-      <ul className="photo-grid">
+      <ul className={`photo-grid cols-${topic.columns}`}>
         {topic.pictures.map((p, i) => (
           <li key={p.id}>
             <button className="photo" onClick={(): void => open(p)} aria-label={t('gallery.openPhoto', { n: i + 1 })}>
-              <img src={p.images.thumb} alt={p.caption ?? ''} loading="lazy" />
+              {/* the small thumbnail is too soft when a picture fills the whole row */}
+              <img src={topic.columns === 1 ? p.images.display : p.images.thumb} alt={p.caption ?? ''} loading="lazy" />
             </button>
           </li>
         ))}

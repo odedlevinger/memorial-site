@@ -1,5 +1,5 @@
 // Test-only in-memory stand-in for /api/content and /api/auth (excluded from coverage).
-import type { ContentStatus, Editor, TopicKind, Language, Page, Picture, Role, SiteInfo, Topic, TopicDetail } from '../content';
+import type { ContentStatus, Editor, GridColumns, TopicKind, Language, Page, Picture, Role, SiteInfo, Topic, TopicDetail } from '../content';
 
 type Tr = Record<string, Record<string, string>>;
 interface Lang {
@@ -18,6 +18,7 @@ interface TopicRow {
   buyUrl: string | null;
   buyLabel: string | null;
   videoUrl: string | null;
+  columns: GridColumns;
   status: ContentStatus;
   coverPictureId: string | null;
   translations: Tr;
@@ -92,7 +93,7 @@ export class FakeServer {
 
   private newTopic(slug: string, title: string, kind: TopicKind, status: ContentStatus): TopicRow {
     const t: TopicRow = {
-      id: uid(), slug, kind, title, description: null, body: null, details: null, buyUrl: null, buyLabel: null, videoUrl: null,
+      id: uid(), slug, kind, title, description: null, body: null, details: null, buyUrl: null, buyLabel: null, videoUrl: null, columns: 3,
       status, coverPictureId: null, translations: {},
     };
     this.topics.push(t);
@@ -352,7 +353,7 @@ export class FakeServer {
   private view(t: TopicRow, publishedOnly: boolean): Topic {
     const pics = this.picturesOf(t.id, publishedOnly);
     const cover = pics.find((x) => x.id === t.coverPictureId) ?? pics[0];
-    const { body: _b, details: _d, buyUrl: _u, buyLabel: _l, videoUrl: _v, ...row } = t;
+    const { body: _b, details: _d, buyUrl: _u, buyLabel: _l, videoUrl: _v, columns: _c, ...row } = t;
     return {
       ...row,
       title: this.text(t, 'title', t.title),
@@ -372,6 +373,7 @@ export class FakeServer {
       buyUrl: t.buyUrl,
       buyLabel: this.text(t, 'buyLabel', t.buyLabel),
       videoUrl: t.videoUrl,
+      columns: t.columns,
     };
   }
 

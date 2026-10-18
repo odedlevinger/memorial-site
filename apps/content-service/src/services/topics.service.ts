@@ -98,6 +98,7 @@ export class TopicsService {
         buyUrl: null,
         buyLabel: null,
         videoUrl: null,
+        columns: 3,
         position: last.length > 0 ? (last[0] as TopicEntity).position + 1 : 0,
         status: 'draft',
         coverPictureId: null,
@@ -129,6 +130,7 @@ export class TopicsService {
     if (dto.buyLabel !== undefined) setText(topic, 'buyLabel', dto.buyLabel, lang);
     if (dto.buyUrl !== undefined) topic.buyUrl = dto.buyUrl;
     if (dto.videoUrl !== undefined) topic.videoUrl = dto.videoUrl;
+    if (dto.columns !== undefined) topic.columns = dto.columns;
     if (dto.kind !== undefined) topic.kind = dto.kind;
     if (dto.status !== undefined) topic.status = dto.status;
     if (dto.coverPictureId !== undefined) topic.coverPictureId = dto.coverPictureId;
@@ -217,6 +219,7 @@ export class TopicsService {
       buyUrl: t.buyUrl,
       buyLabel: textOf(t, 'buyLabel', lang),
       videoUrl: t.videoUrl,
+      columns: t.columns,
     };
   }
 

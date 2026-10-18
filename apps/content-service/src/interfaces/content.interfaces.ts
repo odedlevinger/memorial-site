@@ -7,6 +7,10 @@ export const CONTENT_STATUSES: readonly ContentStatus[] = ['draft', 'published']
 export type TopicKind = 'pictures' | 'text' | 'book' | 'movie';
 export const TOPIC_KINDS: readonly TopicKind[] = ['pictures', 'text', 'book', 'movie'];
 
+/** How many pictures a picture set shows in one row on the website. */
+export type GridColumns = 1 | 2 | 3;
+export const GRID_COLUMNS: readonly GridColumns[] = [1, 2, 3];
+
 export type Role = 'owner' | 'editor' | 'viewer';
 
 /**
@@ -66,6 +70,8 @@ export interface TopicDetailView extends TopicView {
   readonly buyLabel: string | null;
   /** Movie pages: the YouTube link (watch, youtu.be, shorts or embed). */
   readonly videoUrl: string | null;
+  /** Picture sets: how many pictures are shown in one row (1–3). */
+  readonly columns: GridColumns;
 }
 
 /** Who is calling, as resolved from Kong's X-User-Id. */

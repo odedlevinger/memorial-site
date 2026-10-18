@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { ReactElement, TouchEvent } from 'react';
 import type { Picture } from '../content';
 import { useI18n } from '../i18n';
+import { hrefFor } from '../route';
 
 interface LightboxProps {
   readonly title: string;
@@ -52,6 +53,8 @@ export function Lightbox({ title, pictures, index, onIndexChange, onClose }: Lig
 
   return (
     <div className="lightbox" role="dialog" aria-modal="true" aria-label={`${title} — ${t('viewer.photoOf', { n: index + 1, count })}`}>
+      {/* back to the main page; ‹ mirrors itself in right-to-left text */}
+      <a className="lb-home" href={hrefFor({ page: 'home' })}>‹ {t('nav.galleries')}</a>
       <button className="lb-close" onClick={onClose} aria-label={t('viewer.close')}>✕</button>
       <button className="lb-nav lb-prev" onClick={(): void => step(-1)} aria-label={t('viewer.previous')}>‹</button>
       <figure className="lb-figure" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>

@@ -296,6 +296,19 @@ describe('page kinds (text / book / movie)', () => {
     await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ videoUrl: 'https://youtu.be/dQw4w9WgXcQ', kind: 'text' }).expect(200);
     expect((await http().get('/content/public/topics').expect(200)).body[0].cover).toBeNull();
   });
+
+  it('stores how many pictures a picture set shows per row (1–3, default 3)', async () => {
+    const set = await http().post('/content/topics').set(as(EDITOR)).send({ title: 'Rows' }).expect(201);
+    const id = set.body.id as string;
+    expect(set.body).toMatchObject({ columns: 3 });
+    for (const bad of [0, 4, 2.5, '2', null]) {
+      await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ columns: bad }).expect(400);
+    }
+    const two = await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ columns: 2 }).expect(200);
+    expect(two.body).toMatchObject({ columns: 2 });
+    const one = await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ title: 'Rows again' }).expect(200);
+    expect(one.body).toMatchObject({ columns: 2 });
+  });
 });
 
 describe('pictures', () => {

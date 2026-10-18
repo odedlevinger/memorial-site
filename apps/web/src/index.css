@@ -241,13 +241,12 @@ body {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  filter: grayscale(1) brightness(0.92);
   transition: filter 0.3s ease;
 }
 
 .tile:hover img,
 .photo:hover img {
-  filter: grayscale(1) brightness(1.05);
+  filter: brightness(1.08);
 }
 
 .tile-title {
@@ -263,6 +262,20 @@ body {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
+}
+
+.photo-grid.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.photo-grid.cols-1 {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem;
+}
+
+/* one picture per row: show the whole photograph, not a 4:3 crop */
+.photo-grid.cols-1 .photo img {
+  aspect-ratio: auto;
 }
 
 .photo {
@@ -372,6 +385,21 @@ body {
   cursor: pointer;
 }
 
+.lb-home {
+  position: absolute;
+  top: 1.2rem;
+  inset-inline-start: 1.25rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ddd;
+  text-decoration: none;
+}
+
+.lb-home:hover {
+  color: #fff;
+}
+
 .lb-close {
   top: 1rem;
   inset-inline-end: 1.25rem;
@@ -410,7 +438,8 @@ body {
 .crumbs:dir(rtl),
 .tile-title:dir(rtl),
 .lb-meta:dir(rtl),
-.lb-count:dir(rtl) {
+.lb-count:dir(rtl),
+.lb-home:dir(rtl) {
   letter-spacing: 0;
 }
 
@@ -619,6 +648,32 @@ body {
   color: var(--muted);
 }
 
+.admin-choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.admin-choice legend {
+  float: inline-start;
+  margin-inline-end: 0.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.admin-form .admin-choice label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+  color: inherit;
+}
+
 .admin-list li,
 .admin-pictures li {
   display: flex;
@@ -804,9 +859,15 @@ button.status {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .photo-grid {
+  .photo-grid,
+  .photo-grid.cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem;
+  }
+
+  .photo-grid.cols-1 {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
   }
 
   .lb-nav {

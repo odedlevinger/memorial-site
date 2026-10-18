@@ -5,6 +5,8 @@ export type ContentStatus = 'draft' | 'published';
 export type Role = 'owner' | 'editor' | 'viewer';
 /** How a topic's page is shown: a picture set, an illustrated text, a book, or a YouTube movie. */
 export type TopicKind = 'pictures' | 'text' | 'book' | 'movie';
+/** How many pictures a picture set shows in one row. */
+export type GridColumns = 1 | 2 | 3;
 
 /** Back office only: language code → field → text (see content-service's Translations). */
 export type Translations = Readonly<Record<string, Readonly<Record<string, string>>>>;
@@ -66,6 +68,8 @@ export interface TopicDetail extends Topic {
   readonly buyLabel: string | null;
   /** Movie pages: the YouTube link. */
   readonly videoUrl: string | null;
+  /** Picture sets: how many pictures are shown in one row. */
+  readonly columns: GridColumns;
 }
 
 export type PageSlug = 'about' | 'contact';
@@ -115,7 +119,7 @@ export interface Editor {
 }
 
 export type TopicPatch = Partial<
-  Pick<TopicDetail, 'title' | 'slug' | 'kind' | 'description' | 'body' | 'details' | 'buyUrl' | 'buyLabel' | 'videoUrl' | 'status' | 'coverPictureId'>
+  Pick<TopicDetail, 'title' | 'slug' | 'kind' | 'description' | 'body' | 'details' | 'buyUrl' | 'buyLabel' | 'videoUrl' | 'columns' | 'status' | 'coverPictureId'>
 >;
 export type PicturePatch = Partial<Pick<Picture, 'caption' | 'dateText' | 'place' | 'story' | 'status' | 'topicId'>>;
 export type LanguagePatch = Partial<Pick<Language, 'name' | 'direction' | 'labels'>> & { readonly isDefault?: true };
