@@ -17,6 +17,7 @@ interface TopicRow {
   details: string | null;
   buyUrl: string | null;
   buyLabel: string | null;
+  videoUrl: string | null;
   status: ContentStatus;
   coverPictureId: string | null;
   translations: Tr;
@@ -91,7 +92,7 @@ export class FakeServer {
 
   private newTopic(slug: string, title: string, kind: TopicKind, status: ContentStatus): TopicRow {
     const t: TopicRow = {
-      id: uid(), slug, kind, title, description: null, body: null, details: null, buyUrl: null, buyLabel: null,
+      id: uid(), slug, kind, title, description: null, body: null, details: null, buyUrl: null, buyLabel: null, videoUrl: null,
       status, coverPictureId: null, translations: {},
     };
     this.topics.push(t);
@@ -351,7 +352,7 @@ export class FakeServer {
   private view(t: TopicRow, publishedOnly: boolean): Topic {
     const pics = this.picturesOf(t.id, publishedOnly);
     const cover = pics.find((x) => x.id === t.coverPictureId) ?? pics[0];
-    const { body: _b, details: _d, buyUrl: _u, buyLabel: _l, ...row } = t;
+    const { body: _b, details: _d, buyUrl: _u, buyLabel: _l, videoUrl: _v, ...row } = t;
     return {
       ...row,
       title: this.text(t, 'title', t.title),
@@ -370,6 +371,7 @@ export class FakeServer {
       details: this.text(t, 'details', t.details),
       buyUrl: t.buyUrl,
       buyLabel: this.text(t, 'buyLabel', t.buyLabel),
+      videoUrl: t.videoUrl,
     };
   }
 

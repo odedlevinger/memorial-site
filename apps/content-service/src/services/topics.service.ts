@@ -4,7 +4,7 @@ import { In, type Repository } from 'typeorm';
 import { PictureEntity } from '../entities/picture.entity.js';
 import { TopicEntity } from '../entities/topic.entity.js';
 import type { CreateTopicDto, UpdateTopicDto } from '../dto/content.dto.js';
-import type { Caller, LangContext, PictureView, TopicDetailView, TopicView } from '../interfaces/content.interfaces.js';
+import type { Caller, LangContext, PictureImages, PictureView, TopicDetailView, TopicView } from '../interfaces/content.interfaces.js';
 import { AuditService } from './audit.service.js';
 import { ImagesService } from './images.service.js';
 import { requireText, setText, textOf, translationsOf } from './translations.js';
@@ -20,12 +20,24 @@ export function slugify(title: string): string {
   return slug || 'topic';
 }
 
+/** The video id in a YouTube link (watch?v=, youtu.be/, shorts/, embed/, live/), else null. */
+export function youtubeId(url: string): string | null {
+  const m = /(?:[?&]v=|youtu\.be\/|\/shorts\/|\/embed\/|\/live\/)([\w-]{6,})/.exec(url);
+  return m ? (m[1] as string) : null;
+}
+
 /**
- * A published picture set needs at least one published picture; a text or book page shows
- * as soon as it is published.
+ * A published picture set needs at least one published picture; a text, book or movie page
+ * shows as soon as it is published.
  */
 function isShown(t: TopicEntity, publishedPictures: readonly PictureEntity[]): boolean {
   return t.kind !== 'pictures' || publishedPictures.length > 0;
+}
+
+/** A movie without pictures uses the video's YouTube thumbnail as its cover. */
+function videoCover(t: TopicEntity): PictureImages | null {
+  const id = t.kind === 'movie' && t.videoUrl ? youtubeId(t.videoUrl) : null;
+  return id ? { display: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`, thumb: `https://i.ytimg.com/vi/${id}/mqdefault.jpg` } : null;
 }
 
 @Injectable()
@@ -85,6 +97,7 @@ export class TopicsService {
         details: null,
         buyUrl: null,
         buyLabel: null,
+        videoUrl: null,
         position: last.length > 0 ? (last[0] as TopicEntity).position + 1 : 0,
         status: 'draft',
         coverPictureId: null,
@@ -115,6 +128,7 @@ export class TopicsService {
     if (dto.details !== undefined) setText(topic, 'details', dto.details, lang);
     if (dto.buyLabel !== undefined) setText(topic, 'buyLabel', dto.buyLabel, lang);
     if (dto.buyUrl !== undefined) topic.buyUrl = dto.buyUrl;
+    if (dto.videoUrl !== undefined) topic.videoUrl = dto.videoUrl;
     if (dto.kind !== undefined) topic.kind = dto.kind;
     if (dto.status !== undefined) topic.status = dto.status;
     if (dto.coverPictureId !== undefined) topic.coverPictureId = dto.coverPictureId;
@@ -188,7 +202,7 @@ export class TopicsService {
       position: t.position,
       status: t.status,
       coverPictureId: t.coverPictureId,
-      cover: cover ? this.images.urls(cover.storageKey) : null,
+      cover: cover ? this.images.urls(cover.storageKey) : videoCover(t),
       pictureCount: pics.length,
       ...(admin ? { translations: translationsOf(t) } : {}),
     };
@@ -202,6 +216,7 @@ export class TopicsService {
       details: textOf(t, 'details', lang),
       buyUrl: t.buyUrl,
       buyLabel: textOf(t, 'buyLabel', lang),
+      videoUrl: t.videoUrl,
     };
   }
 

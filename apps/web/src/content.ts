@@ -3,8 +3,8 @@
 
 export type ContentStatus = 'draft' | 'published';
 export type Role = 'owner' | 'editor' | 'viewer';
-/** How a topic's page is shown: a picture set, an illustrated text, or a book. */
-export type TopicKind = 'pictures' | 'text' | 'book';
+/** How a topic's page is shown: a picture set, an illustrated text, a book, or a YouTube movie. */
+export type TopicKind = 'pictures' | 'text' | 'book' | 'movie';
 
 /** Back office only: language code → field → text (see content-service's Translations). */
 export type Translations = Readonly<Record<string, Readonly<Record<string, string>>>>;
@@ -57,13 +57,15 @@ export interface Topic {
 
 export interface TopicDetail extends Topic {
   readonly pictures: readonly Picture[];
-  /** Text and book pages: the page's text — see components/RichText.tsx for the markup. */
+  /** Text, book and movie pages: the page's text — see components/RichText.tsx for the markup. */
   readonly body: string | null;
   /** Book pages: "Label: value" lines. */
   readonly details: string | null;
   readonly buyUrl: string | null;
   /** Book pages: the buy button's text; null → the site's "Buy" label. */
   readonly buyLabel: string | null;
+  /** Movie pages: the YouTube link. */
+  readonly videoUrl: string | null;
 }
 
 export type PageSlug = 'about' | 'contact';
@@ -113,7 +115,7 @@ export interface Editor {
 }
 
 export type TopicPatch = Partial<
-  Pick<TopicDetail, 'title' | 'slug' | 'kind' | 'description' | 'body' | 'details' | 'buyUrl' | 'buyLabel' | 'status' | 'coverPictureId'>
+  Pick<TopicDetail, 'title' | 'slug' | 'kind' | 'description' | 'body' | 'details' | 'buyUrl' | 'buyLabel' | 'videoUrl' | 'status' | 'coverPictureId'>
 >;
 export type PicturePatch = Partial<Pick<Picture, 'caption' | 'dateText' | 'place' | 'story' | 'status' | 'topicId'>>;
 export type LanguagePatch = Partial<Pick<Language, 'name' | 'direction' | 'labels'>> & { readonly isDefault?: true };

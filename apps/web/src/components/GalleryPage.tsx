@@ -34,6 +34,7 @@ export function GalleryPage({ slug }: GalleryPageProps): ReactElement {
   const { topic } = state;
   if (topic.kind === 'text') return <TextTopic topic={topic} />;
   if (topic.kind === 'book') return <BookTopic topic={topic} />;
+  if (topic.kind === 'movie') return <MovieTopic topic={topic} />;
 
   return (
     <section className="gallery" aria-labelledby="gallery-title">
@@ -211,6 +212,37 @@ function BookTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
           ))}
         </ul>
       )}
+      {viewer}
+    </article>
+  );
+}
+
+/** The video id in a YouTube link (watch?v=, youtu.be/, shorts/, embed/, live/), else null. */
+export function youtubeId(url: string): string | null {
+  const m = /(?:[?&]v=|youtu\.be\/|\/shorts\/|\/embed\/|\/live\/)([\w-]{6,})/.exec(url);
+  return m ? (m[1] as string) : null;
+}
+
+/** A YouTube movie (privacy-enhanced embed, no cookies until played) with optional text below. */
+function MovieTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
+  const { open, viewer } = useViewer(topic.title, topic.pictures);
+  const id = topic.videoUrl ? youtubeId(topic.videoUrl) : null;
+  return (
+    <article className="movie" aria-labelledby="gallery-title">
+      <h1 id="gallery-title" className="page-title">{topic.title}</h1>
+      {topic.description && <p className="text-topic-intro">{topic.description}</p>}
+      {id && (
+        <div className="movie-frame">
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${id}?rel=0`}
+            title={topic.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
+        </div>
+      )}
+      {topic.body && <RichText body={topic.body} pictures={topic.pictures} onOpen={open} />}
       {viewer}
     </article>
   );
