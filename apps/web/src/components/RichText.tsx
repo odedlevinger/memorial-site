@@ -1,10 +1,11 @@
 import type { ReactElement } from 'react';
 import type { Picture } from '../content';
 import { useI18n } from '../i18n';
-import { linkify } from './TextPages';
+import { formatInline } from './Formatting';
 
 // The body of a text or book page: plain text an editor types in the back office.
 //   blank line         → new paragraph (single newlines are line breaks; URLs become links)
+//   [b] [i] [u] [color=#…] → bold, italic, underline, colour (see Formatting.tsx)
 //   ## Heading         → a sub-heading (any number of #)
 //   > words            → a pull quote (consecutive > lines form one quote)
 //   [photo ab12cd34]   → one of the page's pictures, full width, with its caption
@@ -83,7 +84,7 @@ export function RichText({ body, pictures, onOpen }: RichTextProps): ReactElemen
       {parseBlocks(body).map((block, i) => {
         switch (block.kind) {
           case 'heading':
-            return <h2 key={i}>{block.text}</h2>;
+            return <h2 key={i}>{formatInline(block.text)}</h2>;
           case 'quote':
             return (
               <blockquote key={i}>
@@ -124,7 +125,7 @@ function Lines({ lines }: { readonly lines: readonly string[] }): ReactElement {
       {lines.map((line, j) => (
         <span key={j}>
           {j > 0 && <br />}
-          {linkify(line)}
+          {formatInline(line)}
         </span>
       ))}
     </>

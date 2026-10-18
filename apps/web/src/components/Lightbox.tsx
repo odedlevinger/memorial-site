@@ -3,6 +3,7 @@ import type { ReactElement, TouchEvent } from 'react';
 import type { Picture } from '../content';
 import { useI18n } from '../i18n';
 import { hrefFor } from '../route';
+import { formatInline } from './Formatting';
 
 interface LightboxProps {
   readonly title: string;
@@ -62,7 +63,7 @@ export function Lightbox({ title, pictures, index, onIndexChange, onClose }: Lig
         <figcaption>
           {pic.caption && <span className="lb-caption">{pic.caption}</span>}
           {meta && <span className="lb-meta">{meta}</span>}
-          {pic.story && <span className="lb-story">{pic.story}</span>}
+          {pic.story && <span className="lb-story">{formatInline(pic.story)}</span>}
           {/* Counter keeps "1 / 3" order in right-to-left languages too. The ‹ › arrows need no
               such care: browsers mirror them in right-to-left text, and prev/next sit on the
               logical start/end sides (see .lb-prev / .lb-next). */}

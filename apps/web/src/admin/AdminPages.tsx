@@ -1,6 +1,8 @@
+
 import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactElement } from 'react';
 import { contentApi, type GridColumns, type Language, type PageSlug, type SiteInfo } from '../content';
+import { FormattedTextarea } from './FormattedTextarea';
 import { inputLang, textIn } from './translation';
 import { errorText, useAsync } from './useAsync';
 
@@ -207,7 +209,7 @@ function PageForm({ slug, title, lang }: { readonly slug: PageSlug; readonly tit
         !page.error && <p className="empty">Loading…</p>
       ) : (
         <form className="admin-form" onSubmit={(e): void => save(e, body)}>
-          <label>{title} text<textarea value={body} required={lang.isDefault} maxLength={10000} rows={8} placeholder={lang.isDefault ? undefined : page.data?.body} {...inputLang(lang)} onChange={(e): void => setBody(e.target.value)} /></label>
+          <FormattedTextarea label={`${title} text`} value={body} required={lang.isDefault} maxLength={10000} rows={8} placeholder={lang.isDefault ? undefined : page.data?.body} {...inputLang(lang)} onChange={setBody} />
           <div className="admin-row">
             <button className="btn" type="submit">Save {title}</button>
             <a href={`#/${slug}`}>View page</a>

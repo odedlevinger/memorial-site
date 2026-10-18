@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { ReactElement, ReactNode } from 'react';
+import type { ReactElement } from 'react';
 import { contentApi, type Page, type PageSlug } from '../content';
 import { useI18n } from '../i18n';
+import { formatInline } from './Formatting';
 
 export function About(): ReactElement {
   const { t } = useI18n();
@@ -55,7 +56,7 @@ function SitePage({ slug, title }: { readonly slug: PageSlug; readonly title: st
   );
 }
 
-/** Blank lines → paragraphs, single newlines → line breaks, URLs and emails → links. */
+/** Blank lines → paragraphs, single newlines → line breaks, URLs and emails → links, plus formatting. */
 export function PageText({ body }: { readonly body: string }): ReactElement {
   const paragraphs = body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return (
@@ -65,28 +66,11 @@ export function PageText({ body }: { readonly body: string }): ReactElement {
           {para.split('\n').map((line, j) => (
             <span key={j}>
               {j > 0 && <br />}
-              {linkify(line)}
+              {formatInline(line)}
             </span>
           ))}
         </p>
       ))}
     </>
   );
-}
-
-const LINK = /(https?:\/\/[^\s]+|[^\s@]+@[^\s@]+\.[^\s@]+)/g;
-
-export function linkify(text: string): ReactNode[] {
-  return text.split(LINK).map((part, i) => {
-    if (i % 2 === 0) return part;
-    const target = part.replace(/[.,;:!?)]+$/, '');
-    const trailing = part.slice(target.length);
-    const href = target.includes('@') && !target.startsWith('http') ? `mailto:${target}` : target;
-    return (
-      <span key={i}>
-        <a href={href}>{target}</a>
-        {trailing}
-      </span>
-    );
-  });
 }
