@@ -226,16 +226,21 @@ body {
 
 .tile-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* six tracks so a row can hold 1, 2 or 3 galleries (each row's count is an admin setting) */
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 2.25rem 1.75rem;
 }
 
-.tile-grid.cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.tile-grid .per-row-1 {
+  grid-column: span 6;
 }
 
-.tile-grid.cols-1 {
-  grid-template-columns: minmax(0, 1fr);
+.tile-grid .per-row-2 {
+  grid-column: span 3;
+}
+
+.tile-grid .per-row-3 {
+  grid-column: span 2;
 }
 
 .tile {
@@ -682,6 +687,25 @@ body {
   color: inherit;
 }
 
+.admin-rows {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.admin-rows > legend {
+  margin-bottom: 0.4rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.admin-rows .admin-choice legend {
+  min-width: 3.5rem;
+}
+
 .admin-list li,
 .admin-pictures li {
   display: flex;
@@ -863,9 +887,8 @@ button.status {
     font-size: 0.85rem;
   }
 
-  .tile-grid,
-  .tile-grid.cols-2 {
-    grid-template-columns: minmax(0, 1fr);
+  .tile-grid li[class] {
+    grid-column: 1 / -1;
   }
 
   .photo-grid,

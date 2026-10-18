@@ -77,7 +77,7 @@ export default function App(): ReactElement {
       <div className="site">
         <Header site={site} topics={topics ?? []} role={role} />
         <main className="site-main">
-          {topics !== null ? renderPage(route, topics, site?.homeColumns ?? DEFAULT_SITE.homeColumns, role, refresh) : <SiteStatus failed={loadFailed} onRetry={refresh} />}
+          {topics !== null ? renderPage(route, topics, site?.homeRows ?? DEFAULT_SITE.homeRows, role, refresh) : <SiteStatus failed={loadFailed} onRetry={refresh} />}
         </main>
         <footer className="site-footer">
           <p>© {new Date().getFullYear()} {site?.title}</p>
@@ -100,10 +100,10 @@ function SiteStatus({ failed, onRetry }: { readonly failed: boolean; readonly on
   );
 }
 
-function renderPage(route: Route, topics: readonly Topic[], homeColumns: GridColumns, role: Role, refresh: () => void): ReactElement {
+function renderPage(route: Route, topics: readonly Topic[], homeRows: readonly GridColumns[], role: Role, refresh: () => void): ReactElement {
   switch (route.page) {
     case 'home':
-      return <Home topics={topics} columns={homeColumns} />;
+      return <Home topics={topics} rows={homeRows} />;
     case 'gallery':
       return <GalleryPage key={route.slug} slug={route.slug} />;
     case 'about':

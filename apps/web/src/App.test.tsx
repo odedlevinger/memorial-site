@@ -38,12 +38,14 @@ describe('public site', () => {
     expect(within(nav).getByRole('link', { name: 'Account' })).toBeTruthy();
   });
 
-  it('shows the home page galleries 1, 2 or 3 per row, as set for the site', async () => {
-    server.addTopic('Streets');
-    server.site.homeColumns = 2;
+  it('lays out the home page row by row, as set for the site', async () => {
+    for (const title of ['A', 'B', 'C', 'D', 'E', 'F', 'G']) server.addTopic(title);
+    server.site.homeRows = [1, 3];
     render(<App />);
     const home = await screen.findByRole('region', { name: 'Galleries' });
-    await waitFor(() => expect((home.querySelector('ul') as HTMLElement).className).toBe('tile-grid cols-2'));
+    const classes = (): string[] => [...home.querySelectorAll('li')].map((li) => li.className);
+    // row 1: one gallery; rows after: three each (the last row's number repeats)
+    await waitFor(() => expect(classes()).toEqual(['per-row-1', 'per-row-3', 'per-row-3', 'per-row-3', 'per-row-3', 'per-row-3', 'per-row-3']));
   });
 
   it('shows an empty state and Sign in for visitors when nothing is published', async () => {

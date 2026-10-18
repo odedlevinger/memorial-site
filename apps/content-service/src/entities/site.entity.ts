@@ -13,9 +13,12 @@ export class SiteEntity {
   @Column({ type: 'varchar', length: 120 })
   tagline!: string;
 
-  /** How many galleries the home page shows in one row (1–3). Shared by all languages. */
-  @Column({ type: 'smallint', default: 3 })
-  homeColumns!: GridColumns;
+  /**
+   * Galleries in each row of the home page, top to bottom (1–3 each); rows after the last
+   * use its number. Shared by all languages. null = one row of 3, repeated.
+   */
+  @Column({ type: 'simple-json', nullable: true })
+  homeRows!: GridColumns[] | null;
 
   /** Other languages' text (and the default's), see Translations. null = none yet. */
   @Column({ type: 'simple-json', nullable: true })
