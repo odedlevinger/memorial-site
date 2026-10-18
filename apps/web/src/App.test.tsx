@@ -38,6 +38,14 @@ describe('public site', () => {
     expect(within(nav).getByRole('link', { name: 'Account' })).toBeTruthy();
   });
 
+  it('shows the home page galleries 1, 2 or 3 per row, as set for the site', async () => {
+    server.addTopic('Streets');
+    server.site.homeColumns = 2;
+    render(<App />);
+    const home = await screen.findByRole('region', { name: 'Galleries' });
+    await waitFor(() => expect((home.querySelector('ul') as HTMLElement).className).toBe('tile-grid cols-2'));
+  });
+
   it('shows an empty state and Sign in for visitors when nothing is published', async () => {
     server.signedIn = false;
     render(<App />);

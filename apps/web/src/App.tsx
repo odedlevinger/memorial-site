@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
-import { contentApi, DEFAULT_SITE, type Language, type Role, type SiteInfo, type Topic } from './content';
+import { contentApi, DEFAULT_SITE, type GridColumns, type Language, type Role, type SiteInfo, type Topic } from './content';
 import { BUILT_IN_LANGUAGE, I18nProvider, makeI18n, storedLanguage, storeLanguage, useI18n } from './i18n';
 import { useRoute, type Route } from './route';
 import { Header } from './components/Header';
@@ -77,7 +77,7 @@ export default function App(): ReactElement {
       <div className="site">
         <Header site={site} topics={topics ?? []} role={role} />
         <main className="site-main">
-          {topics !== null ? renderPage(route, topics, role, refresh) : <SiteStatus failed={loadFailed} onRetry={refresh} />}
+          {topics !== null ? renderPage(route, topics, site?.homeColumns ?? DEFAULT_SITE.homeColumns, role, refresh) : <SiteStatus failed={loadFailed} onRetry={refresh} />}
         </main>
         <footer className="site-footer">
           <p>© {new Date().getFullYear()} {site?.title}</p>
@@ -100,10 +100,10 @@ function SiteStatus({ failed, onRetry }: { readonly failed: boolean; readonly on
   );
 }
 
-function renderPage(route: Route, topics: readonly Topic[], role: Role, refresh: () => void): ReactElement {
+function renderPage(route: Route, topics: readonly Topic[], homeColumns: GridColumns, role: Role, refresh: () => void): ReactElement {
   switch (route.page) {
     case 'home':
-      return <Home topics={topics} />;
+      return <Home topics={topics} columns={homeColumns} />;
     case 'gallery':
       return <GalleryPage key={route.slug} slug={route.slug} />;
     case 'about':

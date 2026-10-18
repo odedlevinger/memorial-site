@@ -46,7 +46,7 @@ export class FakeServer {
   pictures: PictureRow[] = [];
   owner: Editor = { email: 'me@example.com', role: 'owner', addedBy: null, createdAt: null };
   editors: Editor[] = [];
-  site: SiteInfo & { translations: Tr } = { title: 'Memory', tagline: 'a life in photographs', updatedAt: null, translations: {} };
+  site: SiteInfo & { translations: Tr; homeColumns: GridColumns } = { title: 'Memory', tagline: 'a life in photographs', homeColumns: 3, updatedAt: null, translations: {} };
   pages: Record<string, Page & { translations: Tr }> = {
     about: { slug: 'about', body: 'About this site.', updatedAt: null, translations: {} },
     contact: { slug: 'contact', body: 'Get in touch.', updatedAt: null, translations: {} },
@@ -176,6 +176,7 @@ export class FakeServer {
       const s = this.site;
       s.title = this.write(s, 'title', String(body['title']).trim(), s.title);
       s.tagline = this.write(s, 'tagline', String(body['tagline']).trim(), s.tagline);
+      if (body['homeColumns'] !== undefined) s.homeColumns = body['homeColumns'] as GridColumns;
       s.updatedAt = '2026-10-17T00:00:00Z';
       return this.json(this.siteView(true));
     }
@@ -292,7 +293,7 @@ export class FakeServer {
 
   private siteView(admin: boolean): SiteInfo {
     const s = this.site;
-    const view = { title: this.text(s, 'title', s.title), tagline: this.text(s, 'tagline', s.tagline), updatedAt: s.updatedAt };
+    const view = { title: this.text(s, 'title', s.title), tagline: this.text(s, 'tagline', s.tagline), homeColumns: s.homeColumns, updatedAt: s.updatedAt };
     return admin ? { ...view, translations: s.translations } : view;
   }
 

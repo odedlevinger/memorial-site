@@ -88,12 +88,14 @@ export interface SiteInfo {
   readonly title: string;
   /** May be empty — the header then shows the title alone. */
   readonly tagline: string;
+  /** How many galleries the home page shows in one row. */
+  readonly homeColumns: GridColumns;
   readonly updatedAt: string | null;
   readonly translations?: Translations;
 }
 
 /** Used if the site settings cannot be loaded (matches content-service's defaults). */
-export const DEFAULT_SITE: SiteInfo = { title: 'Memory', tagline: 'a life in photographs', updatedAt: null };
+export const DEFAULT_SITE: SiteInfo = { title: 'Memory', tagline: 'a life in photographs', homeColumns: 3, updatedAt: null };
 
 /** Signed-in people on one day (site time zone). */
 export interface DailyCount {
@@ -214,7 +216,8 @@ export const contentApi = {
   page: (slug: PageSlug): Promise<Page> => call(`/pages/${slug}`),
   site: (): Promise<SiteInfo> => call('/site'),
   updatePage: (slug: PageSlug, body: string, lang?: string): Promise<Page> => call(inLang(`/pages/${slug}`, lang), json('PUT', { body })),
-  updateSite: (title: string, tagline: string, lang?: string): Promise<SiteInfo> => call(inLang('/site', lang), json('PUT', { title, tagline })),
+  updateSite: (title: string, tagline: string, homeColumns: GridColumns, lang?: string): Promise<SiteInfo> =>
+    call(inLang('/site', lang), json('PUT', { title, tagline, homeColumns })),
 
   addLanguage: (language: Pick<Language, 'code' | 'name' | 'direction'>): Promise<Language[]> => call('/languages', json('POST', language)),
   updateLanguage: (code: string, patch: LanguagePatch): Promise<Language[]> =>

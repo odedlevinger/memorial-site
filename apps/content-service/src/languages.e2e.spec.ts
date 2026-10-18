@@ -139,7 +139,7 @@ describe('translated content', () => {
   it('serves pages and the site title per language', async () => {
     await addHebrew();
     expect((await http().get('/content/pages/about').set(as(EDITOR)).expect(200)).body).toMatchObject({ updatedAt: null, translations: {} });
-    expect((await http().get('/content/site').set(as(EDITOR)).expect(200)).body).toEqual({ title: 'Memory', tagline: 'a life in photographs', updatedAt: null, translations: {} });
+    expect((await http().get('/content/site').set(as(EDITOR)).expect(200)).body).toEqual({ title: 'Memory', tagline: 'a life in photographs', homeColumns: 3, updatedAt: null, translations: {} });
     await http().get('/content/site').set(as(VIEWER)).expect(403);
     await http().get('/content/pages/about').set(as(VIEWER)).expect(403);
 
