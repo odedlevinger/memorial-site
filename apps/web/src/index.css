@@ -1398,15 +1398,75 @@ button.status {
   position: relative;
   aspect-ratio: 16 / 9;
   margin-bottom: 2rem;
+  overflow: hidden;
   background: #111;
 }
 
+/* Taller than the frame: the video letterboxes to exactly the frame's height, and YouTube's
+   title bar and corner logo sit in the cropped-off bands above and below. */
 .movie-frame iframe {
   position: absolute;
-  inset: 0;
+  top: -80px;
+  left: 0;
   width: 100%;
-  height: 100%;
+  height: calc(100% + 160px);
   border: 0;
+}
+
+/* Takes every click and hover, so YouTube's own overlays never appear. */
+.movie-cover {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+.movie-controls {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+  transition: opacity 0.25s;
+}
+
+/* While playing, the controls step aside until the pointer or keyboard comes back. */
+.movie-frame.playing .movie-controls {
+  opacity: 0;
+}
+
+.movie-frame.playing:hover .movie-controls,
+.movie-frame.playing:focus-within .movie-controls {
+  opacity: 1;
+}
+
+.movie-controls button {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  cursor: pointer;
+}
+
+.movie-controls button:hover,
+.movie-controls button:focus-visible {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.movie-controls svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: currentColor;
+}
+
+.movie-frame:fullscreen {
+  aspect-ratio: auto;
+  margin: 0;
 }
 
 .movie .rich-text {

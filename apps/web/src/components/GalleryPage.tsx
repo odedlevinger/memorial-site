@@ -5,6 +5,7 @@ import { useI18n } from '../i18n';
 import { hrefFor } from '../route';
 import { formatInline } from './Formatting';
 import { Lightbox } from './Lightbox';
+import { MoviePlayer } from './MoviePlayer';
 import { RichText } from './RichText';
 import { NotFound } from './TextPages';
 
@@ -160,7 +161,7 @@ export function youtubeId(url: string): string | null {
   return m ? (m[1] as string) : null;
 }
 
-/** A YouTube movie (privacy-enhanced embed) that starts playing on arrival, with optional text below. */
+/** A YouTube movie that starts playing on arrival, with optional text below. */
 function MovieTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
   const { open, viewer } = useViewer(topic.title, topic.pictures);
   const id = topic.videoUrl ? youtubeId(topic.videoUrl) : null;
@@ -168,17 +169,7 @@ function MovieTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
     <article className="movie" aria-labelledby="gallery-title">
       <h1 id="gallery-title" className="page-title">{topic.title}</h1>
       {topic.description && <p className="text-topic-intro">{formatInline(topic.description)}</p>}
-      {id && (
-        <div className="movie-frame">
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${id}?rel=0&autoplay=1`}
-            title={topic.title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-          />
-        </div>
-      )}
+      {id && <MoviePlayer id={id} title={topic.title} />}
       {topic.body && <RichText body={topic.body} pictures={topic.pictures} onOpen={open} />}
       {viewer}
     </article>
