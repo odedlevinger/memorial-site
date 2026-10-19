@@ -498,4 +498,29 @@ describe('site title', () => {
     expect(full.text).toContain(`<meta property="og:image" content="${body.shareImage as string}" />`);
     expect(full.text).toContain('<meta name="twitter:card" content="summary_large_image" />');
   });
+
+  it('serves the site text as plain HTML for readers without JavaScript, escaped', async () => {
+    const empty = await http().get('/content/public/site-summary').expect(200);
+    expect(empty.headers['content-type']).toBe('text/html; charset=utf-8');
+    expect(empty.headers['cache-control']).toBe('public, max-age=60');
+    expect(empty.text).toMatch(/^<main lang="[a-z-]+" dir="auto" style="[^"]+"><h1>Memory<\/h1>\n<p>a life in photographs<\/p>/);
+    expect(empty.text).not.toContain('<ul>');
+
+    await http().put('/content/site').set(as(OWNER)).send({ title: 'Lavi <&>', tagline: '' }).expect(200);
+    await http().put('/content/pages/about').set(as(OWNER)).send({ body: 'First "one".\n\n  \n\nSecond.' }).expect(200);
+    await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);
+    const a = await createTopic('Sea & sky');
+    const [p] = await upload(a.id);
+    await http().patch(`/content/pictures/${p!.id}`).set(as(EDITOR)).send({ status: 'published' }).expect(200);
+    await http().patch(`/content/topics/${a.id}`).set(as(EDITOR)).send({ status: 'published', description: 'Waves <b>' }).expect(200);
+    const b = await createTopic('Plain');
+    const [q] = await upload(b.id);
+    await http().patch(`/content/pictures/${q!.id}`).set(as(EDITOR)).send({ status: 'published' }).expect(200);
+    await http().patch(`/content/topics/${b.id}`).set(as(EDITOR)).send({ status: 'published' }).expect(200);
+
+    const full = await http().get('/content/public/site-summary').expect(200);
+    expect(full.text).toContain('<h1>Lavi &#60;&#38;&#62;</h1>\n<p>First &#34;one&#34;.</p>\n<p>Second.</p>\n<ul>');
+    expect(full.text).toContain(`<li><a href="#/galleries/${a.slug}">Sea &#38; sky</a> — Waves &#60;b&#62;</li>`);
+    expect(full.text).toContain(`<li><a href="#/galleries/${b.slug}">Plain</a></li>`);
+  });
 });

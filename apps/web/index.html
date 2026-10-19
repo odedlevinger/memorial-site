@@ -12,7 +12,10 @@
     <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- The site text for readers that don't run JavaScript (web filters, crawlers), from
+         content-service via SSI (nginx.conf.template); React replaces it on start. -->
+    <!--# block name="no-site-summary" --><!--# endblock -->
+    <div id="root"><!--# include virtual="/site-summary" stub="no-site-summary" --></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

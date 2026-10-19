@@ -19,6 +19,8 @@ describe('imageStoreFactory', () => {
     const store = imageStoreFactory(new ConfigService({ STORAGE_BUCKET: 'photos' }));
     expect(store).toBeInstanceOf(GcsImageStore);
     expect(store.publicUrl('a.jpg')).toBe('https://storage.googleapis.com/photos/a.jpg');
+    const proxied = imageStoreFactory(new ConfigService({ STORAGE_BUCKET: 'photos', STORAGE_PUBLIC_BASE: 'https://h/media' }));
+    expect(proxied.publicUrl('a.jpg')).toBe('https://h/media/a.jpg');
   });
 
   it('falls back to local disk with configurable or default paths', () => {

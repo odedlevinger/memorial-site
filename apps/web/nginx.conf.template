@@ -1,4 +1,5 @@
-# Link-preview tags (see /share-meta below): cached so a cold content-service never holds up the page.
+# Link-preview tags and site text (see /share-meta, /site-summary below): cached so a cold
+# content-service never holds up the page.
 proxy_cache_path /var/cache/nginx/share-meta levels=1 keys_zone=share_meta:1m max_size=1m inactive=1d use_temp_path=off;
 
 server {
@@ -45,6 +46,23 @@ server {
     proxy_cache_lock on;
   }
 
+  # The site text as plain HTML, included into index.html's #root by SSI so web filters
+  # and other readers that don't run JavaScript see real content (React replaces it).
+  location = /site-summary {
+    internal;
+    proxy_pass ${AUTH_SERVICE_URL}/content-service/content/public/site-summary;
+    proxy_set_header Host $proxy_host;
+    proxy_set_header Accept-Encoding "";
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 5s;
+    proxy_cache share_meta;
+    proxy_cache_key site-summary;
+    proxy_cache_valid 200 1m;
+    proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+    proxy_cache_background_update on;
+    proxy_cache_lock on;
+  }
+
   # Hashed build assets must 404 (not fall back to index.html) when missing.
   location /assets/ {
     add_header Cache-Control "public, max-age=31536000, immutable";
@@ -52,7 +70,7 @@ server {
   }
 
   location / {
-    ssi on;  # index.html includes /share-meta
+    ssi on;  # index.html includes /share-meta and /site-summary
     add_header Cache-Control "no-cache";
     try_files $uri $uri/ /index.html;
   }

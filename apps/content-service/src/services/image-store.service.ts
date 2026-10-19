@@ -5,11 +5,16 @@ import type { ImageStore } from '../interfaces/content.interfaces.js';
 
 export const IMAGE_STORE = Symbol('IMAGE_STORE');
 
-/** Cloud Storage bucket with public-read objects (production). */
+/**
+ * Cloud Storage bucket with public-read objects (production). URLs point at `publicBase`
+ * when given (the site's own /media path, proxied to the bucket by infra/cloudflare —
+ * corporate web filters block storage.googleapis.com as "cloud storage"), else at the bucket.
+ */
 export class GcsImageStore implements ImageStore {
   constructor(
     private readonly storage: Storage,
     private readonly bucketName: string,
+    private readonly publicBase?: string,
   ) {}
 
   async put(path: string, data: Buffer, contentType: string): Promise<void> {
@@ -24,7 +29,8 @@ export class GcsImageStore implements ImageStore {
   }
 
   publicUrl(path: string): string {
-    return `https://storage.googleapis.com/${this.bucketName}/${path}`;
+    const base = this.publicBase ? this.publicBase.replace(/\/+$/, '') : `https://storage.googleapis.com/${this.bucketName}`;
+    return `${base}/${path}`;
   }
 }
 
