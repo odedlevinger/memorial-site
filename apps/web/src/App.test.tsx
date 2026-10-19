@@ -246,9 +246,12 @@ describe('text and book pages', () => {
     expect(screen.getByText('Author')).toBeTruthy();
     expect(screen.getByText('J. Maloof')).toBeTruthy();
     expect(screen.getByText('Hardcover')).toBeTruthy();
-    const buy = screen.getByRole('link', { name: 'Buy' });
-    expect(buy.getAttribute('href')).toBe('https://shop.example/book');
-    expect(buy.getAttribute('rel')).toContain('noopener');
+    const buys = screen.getAllByRole('link', { name: 'Buy' });
+    expect(buys).toHaveLength(2); // one at the top of the page, one at the bottom
+    for (const buy of buys) {
+      expect(buy.getAttribute('href')).toBe('https://shop.example/book');
+      expect(buy.getAttribute('rel')).toContain('noopener');
+    }
 
     fireEvent.click(screen.getByRole('button', { name: 'Open photo 1' }));
     let viewer = await screen.findByRole('dialog');
@@ -266,6 +269,7 @@ describe('text and book pages', () => {
     window.location.hash = '#/galleries/bare';
     render(<App />);
     expect(await screen.findByRole('link', { name: 'Order now' })).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: 'Order now' })).toHaveLength(1); // nothing between top and bottom
     expect(document.querySelector('.book-cover, .book-details, .book-more, .rich-text')).toBeNull();
   });
 
