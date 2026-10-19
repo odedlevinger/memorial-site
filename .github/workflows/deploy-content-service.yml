@@ -62,6 +62,8 @@ jobs:
       #   content-service-database-url, auth-service-admin-secret
       # SEED_SOURCE_URL = deployed web app; the placeholder galleries are imported once
       # into an empty database (SPEC §5).
+      # --min-instances 1 keeps one instance warm, so visitors never wait for a cold start
+      # (billed even when idle, at Cloud Run's reduced idle rate).
       - name: Deploy to Cloud Run
         run: |
           AUTH_URL=$(gcloud run services describe memorial-site-auth \
@@ -74,6 +76,7 @@ jobs:
             --region "$GCP_REGION" \
             --platform managed \
             --cpu-boost \
+            --min-instances 1 \
             --port 3002 \
             --memory 1Gi \
             --no-allow-unauthenticated \
