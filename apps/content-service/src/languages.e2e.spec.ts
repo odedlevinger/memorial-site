@@ -136,10 +136,24 @@ describe('translated content', () => {
     expect(untitled.body).toMatchObject({ title: 'Streets', translations: { he: { description: 'תיאור' } } });
   });
 
+  it('keeps a font per language, not inherited from the default', async () => {
+    await addHebrew();
+    await http().put('/content/site').set(as(EDITOR)).send({ title: 'Lavi', tagline: '', font: 'EB Garamond' }).expect(200);
+    const he = await http().put('/content/site?lang=he').set(as(EDITOR)).send({ title: 'לביא', tagline: '' }).expect(200);
+    expect(he.body).toMatchObject({ font: null, fonts: { en: 'EB Garamond' } });
+    await http().put('/content/site?lang=he').set(as(EDITOR)).send({ title: 'לביא', tagline: '', font: 'Frank Ruhl Libre' }).expect(200);
+    await http().get('/content/public/site?lang=he').expect(200).expect((r) => expect(r.body.font).toBe('Frank Ruhl Libre'));
+    await http().get('/content/public/site?lang=en').expect(200).expect((r) => expect(r.body.font).toBe('EB Garamond'));
+    // changing the default language leaves each language's font where it was
+    await http().patch('/content/languages/he').set(as(EDITOR)).send({ isDefault: true }).expect(200);
+    const all = await http().get('/content/site').set(as(EDITOR)).expect(200);
+    expect(all.body).toMatchObject({ font: 'Frank Ruhl Libre', fonts: { en: 'EB Garamond', he: 'Frank Ruhl Libre' } });
+  });
+
   it('serves pages and the site title per language', async () => {
     await addHebrew();
     expect((await http().get('/content/pages/about').set(as(EDITOR)).expect(200)).body).toMatchObject({ updatedAt: null, translations: {} });
-    expect((await http().get('/content/site').set(as(EDITOR)).expect(200)).body).toEqual({ title: 'Memory', tagline: 'a life in photographs', homeRows: [3], shareImage: null, updatedAt: null, translations: {} });
+    expect((await http().get('/content/site').set(as(EDITOR)).expect(200)).body).toEqual({ title: 'Memory', tagline: 'a life in photographs', homeRows: [3], shareImage: null, font: null, updatedAt: null, translations: {}, fonts: {} });
     await http().get('/content/site').set(as(VIEWER)).expect(403);
     await http().get('/content/pages/about').set(as(VIEWER)).expect(403);
 

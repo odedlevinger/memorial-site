@@ -52,6 +52,9 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 **Site settings**
 - Title (required, ≤ 60 chars) and tagline (optional, ≤ 120 chars) — shown in the header,
   footer and browser tab. Defaults: "Memory" / "a life in photographs".
+- Font, per language (optional) — the typeface of the site's titles and text, chosen from a
+  fixed list of Google Fonts. None = the built-in serif. A language without a font of its
+  own uses the built-in serif (it does not inherit the default language's font).
 
 **Language**
 - Code (lower-case language tag, e.g. `en`, `he`, `pt-br`), name as shown in the language
@@ -81,7 +84,7 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 7. Deleting a topic requires confirmation and deletes its pictures.
 8. Owner only: view the owner and Editors, add and remove Editors (by email), and make an Editor the owner.
 9. Edit the text of the About and Contact pages.
-10. Edit the site title and tagline.
+10. Edit the site title and tagline, and choose each language's font.
 11. Add, rename and remove languages, set each one's text direction and labels, and choose
     the default language.
 12. Edit every translatable field (§2) in any of the site's languages.

@@ -94,12 +94,16 @@ export interface SiteInfo {
   readonly homeRows: readonly GridColumns[];
   /** URL of the picture shown when a link to the site is shared; null = none. */
   readonly shareImage: string | null;
+  /** This language's font for titles and text (a family from fonts.ts); null = the built-in serif. */
+  readonly font: string | null;
   readonly updatedAt: string | null;
   readonly translations?: Translations;
+  /** Back office only: each language's font, by language code. */
+  readonly fonts?: Readonly<Record<string, string>>;
 }
 
 /** Used if the site settings cannot be loaded (matches content-service's defaults). */
-export const DEFAULT_SITE: SiteInfo = { title: 'Memory', tagline: 'a life in photographs', homeRows: [3], shareImage: null, updatedAt: null };
+export const DEFAULT_SITE: SiteInfo = { title: 'Memory', tagline: 'a life in photographs', homeRows: [3], shareImage: null, font: null, updatedAt: null };
 
 /** Signed-in people on one day (site time zone). */
 export interface DailyCount {
@@ -244,8 +248,8 @@ export const contentApi = {
   page: (slug: PageSlug): Promise<Page> => call(`/pages/${slug}`),
   site: (): Promise<SiteInfo> => call('/site'),
   updatePage: (slug: PageSlug, body: string, lang?: string): Promise<Page> => call(inLang(`/pages/${slug}`, lang), json('PUT', { body })),
-  updateSite: (title: string, tagline: string, homeRows: readonly GridColumns[], lang?: string): Promise<SiteInfo> =>
-    call(inLang('/site', lang), json('PUT', { title, tagline, homeRows })),
+  updateSite: (title: string, tagline: string, homeRows: readonly GridColumns[], font: string | null, lang?: string): Promise<SiteInfo> =>
+    call(inLang('/site', lang), json('PUT', { title, tagline, homeRows, font })),
   setShareImage: (f: File): Promise<SiteInfo> => call('/site/share-image', { method: 'PUT', body: file('file', f) }),
   removeShareImage: (): Promise<SiteInfo> => call('/site/share-image', { method: 'DELETE' }),
 

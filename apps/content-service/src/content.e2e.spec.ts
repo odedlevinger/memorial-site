@@ -522,7 +522,7 @@ describe('pages (About / Contact)', () => {
 describe('site title', () => {
   it('serves the defaults until an editor saves, then the trimmed saved values', async () => {
     const res = await http().get('/content/public/site').expect(200);
-    expect(res.body).toEqual({ title: 'Memory', tagline: 'a life in photographs', homeRows: [3], shareImage: null, updatedAt: null });
+    expect(res.body).toEqual({ title: 'Memory', tagline: 'a life in photographs', homeRows: [3], shareImage: null, font: null, updatedAt: null });
     expect(res.headers['cache-control']).toBe('public, max-age=30');
 
     await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);
@@ -532,8 +532,10 @@ describe('site title', () => {
       tagline: '',
       homeRows: [3],
       shareImage: null,
+      font: null,
       updatedAt: expect.any(String),
       translations: { en: { title: 'Grandpa Lavi', tagline: '' } },
+      fonts: {},
     });
     await http().put('/content/site').set(as(OWNER)).send({ title: 'Lavi', tagline: '1940–2025' }).expect(200);
     await http().get('/content/public/site').expect(200).expect((r) => expect(r.body).toMatchObject({ title: 'Lavi', tagline: '1940–2025' }));
@@ -549,6 +551,19 @@ describe('site title', () => {
     for (const bad of [2, [], [0], [4], [1.5], ['2'], [1, null], null, Array(51).fill(1)]) {
       await http().put('/content/site').set(as(OWNER)).send({ title: 'x', tagline: '', homeRows: bad }).expect(400);
     }
+    for (const bad of ['Comic Sans MS', 'frank ruhl libre', '', 3, ['Lora']]) {
+      await http().put('/content/site').set(as(OWNER)).send({ title: 'x', tagline: '', font: bad }).expect(400);
+    }
+  });
+
+  it('stores the font, kept when left out and cleared with null', async () => {
+    const saved = await http().put('/content/site').set(as(OWNER)).send({ title: 'Lavi', tagline: '', font: 'EB Garamond' }).expect(200);
+    expect(saved.body).toMatchObject({ font: 'EB Garamond', fonts: { en: 'EB Garamond' } });
+    await http().put('/content/site').set(as(OWNER)).send({ title: 'Lavi again', tagline: '' }).expect(200);
+    await http().get('/content/public/site').expect(200).expect((r) => expect(r.body).toMatchObject({ title: 'Lavi again', font: 'EB Garamond' }));
+    const cleared = await http().put('/content/site').set(as(OWNER)).send({ title: 'Lavi', tagline: '', font: null }).expect(200);
+    expect(cleared.body).toMatchObject({ font: null, fonts: {} });
+    await http().get('/content/public/site').expect(200).expect((r) => expect(r.body.font).toBeNull());
   });
 
   it('stores the galleries in each home page row, kept when left out', async () => {

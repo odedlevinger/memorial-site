@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactElement } from 'react';
 import { contentApi, type GridColumns, type Language, type PageSlug, type SiteInfo } from '../content';
+import { fontsFor, fontStack, loadFont } from '../fonts';
 import { FormattedTextarea } from './FormattedTextarea';
 import { inputLang, textIn } from './translation';
 import { errorText, useAsync } from './useAsync';
@@ -17,7 +18,7 @@ interface AdminPagesProps {
   readonly onChanged: () => void;
 }
 
-/** Edit the site title, the home page layout and the text of the About and Contact pages. */
+/** Edit the site font and title, the home page layout and the text of the About and Contact pages. */
 export function AdminPages({ lang, onChanged }: AdminPagesProps): ReactElement {
   return (
     <div>
@@ -35,9 +36,40 @@ export function AdminPages({ lang, onChanged }: AdminPagesProps): ReactElement {
 }
 
 interface SiteFields {
+  /** null = the built-in serif. */
+  font: string | null;
   title: string;
   tagline: string;
   homeRows: readonly GridColumns[];
+}
+
+/** The language's font for titles and text, with a sample of the site title in it. */
+function FontPicker({ font, sample, lang, onChange }: { readonly font: string | null; readonly sample: string | undefined; readonly lang: Language; readonly onChange: (font: string | null) => void }): ReactElement {
+  const choices = fontsFor(lang.code);
+  // A saved font this language's list leaves out (e.g. after its code changed) stays selectable.
+  const missing = font !== null && !choices.some((c) => c.family === font);
+
+  useEffect(() => {
+    if (font) loadFont(font);
+  }, [font]);
+
+  return (
+    <div className="font-picker">
+      <label>
+        Font
+        <select value={font ?? ''} onChange={(e): void => onChange(e.target.value || null)}>
+          <option value="">Built-in serif (no download)</option>
+          {missing && <option value={font}>{font}</option>}
+          {choices.map((c) => (
+            <option key={c.family} value={c.family}>{`${c.family} — ${c.style}`}</option>
+          ))}
+        </select>
+      </label>
+      <p className="font-sample" style={{ fontFamily: fontStack(font) }} {...inputLang(lang)} aria-label="Font sample">
+        {sample}
+      </p>
+    </div>
+  );
 }
 
 /** Same limit as content-service's MAX_HOME_ROWS. */
@@ -80,6 +112,7 @@ function SiteForm({ lang, onChanged }: AdminPagesProps): ReactElement {
   useEffect(() => {
     if (site.data) {
       setFields({
+        font: site.data.fonts?.[lang.code] ?? null,
         title: textIn(site.data, 'title', site.data.title, lang),
         tagline: textIn(site.data, 'tagline', site.data.tagline, lang),
         homeRows: site.data.homeRows,
@@ -91,7 +124,7 @@ function SiteForm({ lang, onChanged }: AdminPagesProps): ReactElement {
     e.preventDefault();
     setError(null);
     setMessage(null);
-    contentApi.updateSite(f.title, f.tagline, f.homeRows, lang.code).then(
+    contentApi.updateSite(f.title, f.tagline, f.homeRows, f.font, lang.code).then(
       (saved) => {
         site.set(saved);
         setMessage('Site settings saved');
@@ -111,6 +144,7 @@ function SiteForm({ lang, onChanged }: AdminPagesProps): ReactElement {
         !site.error && <p className="empty">Loading…</p>
       ) : (
         <form className="admin-form" onSubmit={(e): void => save(e, fields)}>
+          <FontPicker font={fields.font} sample={fields.title || site.data?.title} lang={lang} onChange={(font): void => setFields({ ...fields, font })} />
           <label>Title<input value={fields.title} required={lang.isDefault} maxLength={60} placeholder={hint(site.data?.title)} {...inputLang(lang)} onChange={(e): void => setFields({ ...fields, title: e.target.value })} /></label>
           <label>Tagline (optional)<input value={fields.tagline} maxLength={120} placeholder={hint(site.data?.tagline)} {...inputLang(lang)} onChange={(e): void => setFields({ ...fields, tagline: e.target.value })} /></label>
           <HomeRows rows={fields.homeRows} onChange={(homeRows): void => setFields({ ...fields, homeRows })} />

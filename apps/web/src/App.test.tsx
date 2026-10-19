@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from './App';
 import { publicRetry } from './content';
+import { BUILT_IN_SERIF, fontStack } from './fonts';
 import { FakeServer } from './test/fakeServer';
 
 let server: FakeServer;
@@ -349,16 +350,18 @@ describe('movie pages', () => {
 
 describe('site title', () => {
   it('shows the saved title and falls back to the default when it cannot load', async () => {
-    server.site = { title: 'Lavi', tagline: '1940–2025', updatedAt: null, translations: {} };
+    server.site = { ...server.site, title: 'Lavi', tagline: '1940–2025', fonts: { en: 'EB Garamond' } };
     const { unmount } = render(<App />);
     expect(await screen.findByRole('link', { name: 'Lavi' })).toBeTruthy();
     expect(screen.getByText('1940–2025')).toBeTruthy();
+    expect(document.documentElement.style.getPropertyValue('--serif')).toBe(fontStack('EB Garamond'));
     unmount();
 
     for (let i = 0; i < publicRetry.attempts; i++) server.failNext(/GET \/api\/content\/public\/site$/, 503);
     render(<App />);
     expect(await screen.findByRole('link', { name: 'Memory' })).toBeTruthy();
     expect(screen.getByText('a life in photographs')).toBeTruthy();
+    expect(document.documentElement.style.getPropertyValue('--serif')).toBe(BUILT_IN_SERIF);
   });
 });
 

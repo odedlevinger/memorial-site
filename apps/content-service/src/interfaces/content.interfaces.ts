@@ -11,6 +11,19 @@ export const TOPIC_KINDS: readonly TopicKind[] = ['pictures', 'text', 'book', 'm
 export type GridColumns = 1 | 2 | 3;
 export const GRID_COLUMNS: readonly GridColumns[] = [1, 2, 3];
 
+/**
+ * The Google Fonts a language's site text can use, by family name. Kept in step with the
+ * web app's font catalog (apps/web/src/fonts.ts), which knows how each one looks and loads.
+ */
+export const SITE_FONTS = [
+  'Frank Ruhl Libre', 'David Libre', 'Noto Serif Hebrew', 'Bona Nova', 'Tinos', 'Cardo', 'Bellefair', 'Suez One',
+  'Heebo', 'Assistant', 'Rubik', 'Alef', 'Open Sans', 'IBM Plex Sans Hebrew', 'Noto Sans Hebrew', 'Varela Round',
+  'Miriam Libre', 'Secular One', 'Amatic SC', 'Karantina', 'Solitreo',
+  'EB Garamond', 'Cormorant Garamond', 'Libre Baskerville', 'Lora', 'Crimson Pro', 'Source Serif 4', 'Spectral',
+  'Playfair Display', 'Inter', 'Lato', 'Nunito Sans',
+] as const;
+export type SiteFont = (typeof SITE_FONTS)[number];
+
 export type Role = 'owner' | 'editor' | 'viewer';
 
 /**
@@ -143,10 +156,14 @@ export interface SiteView {
   readonly homeRows: readonly GridColumns[];
   /** URL of the picture shown when a link to the site is shared; null = none. Shared by all languages. */
   readonly shareImage: string | null;
+  /** The requested language's font for titles and text; null = the built-in serif. */
+  readonly font: SiteFont | null;
   /** null while the site still uses the built-in defaults. */
   readonly updatedAt: string | null;
   /** Back office only: every language's text, for editing translations. */
   readonly translations?: Translations;
+  /** Back office only: each language's font, by language code (none = the built-in serif). */
+  readonly fonts?: Readonly<Record<string, SiteFont>>;
 }
 
 export type Direction = 'ltr' | 'rtl';

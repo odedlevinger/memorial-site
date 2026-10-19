@@ -47,7 +47,9 @@ export class FakeServer {
   pictures: PictureRow[] = [];
   owner: Editor = { email: 'me@example.com', role: 'owner', addedBy: null, createdAt: null };
   editors: Editor[] = [];
-  site: SiteInfo & { translations: Tr; homeRows: readonly GridColumns[] } = { title: 'Memory', tagline: 'a life in photographs', homeRows: [3], shareImage: null, updatedAt: null, translations: {} };
+  site: SiteInfo & { translations: Tr; homeRows: readonly GridColumns[]; fonts: Record<string, string> } = {
+    title: 'Memory', tagline: 'a life in photographs', homeRows: [3], shareImage: null, font: null, updatedAt: null, translations: {}, fonts: {},
+  };
   pages: Record<string, Page & { translations: Tr }> = {
     about: { slug: 'about', body: 'About this site.', updatedAt: null, translations: {} },
     contact: { slug: 'contact', body: 'Get in touch.', updatedAt: null, translations: {} },
@@ -180,6 +182,10 @@ export class FakeServer {
       s.title = this.write(s, 'title', String(body['title']).trim(), s.title);
       s.tagline = this.write(s, 'tagline', String(body['tagline']).trim(), s.tagline);
       if (body['homeRows'] !== undefined) s.homeRows = body['homeRows'] as GridColumns[];
+      if (body['font'] !== undefined) {
+        const { [this.lang.code]: _, ...others } = s.fonts;
+        s.fonts = body['font'] ? { ...others, [this.lang.code]: String(body['font']) } : others;
+      }
       s.updatedAt = '2026-10-17T00:00:00Z';
       return this.json(this.siteView(true));
     }
@@ -312,8 +318,15 @@ export class FakeServer {
 
   private siteView(admin: boolean): SiteInfo {
     const s = this.site;
-    const view = { title: this.text(s, 'title', s.title), tagline: this.text(s, 'tagline', s.tagline), homeRows: s.homeRows, shareImage: s.shareImage, updatedAt: s.updatedAt };
-    return admin ? { ...view, translations: s.translations } : view;
+    const view = {
+      title: this.text(s, 'title', s.title),
+      tagline: this.text(s, 'tagline', s.tagline),
+      homeRows: s.homeRows,
+      shareImage: s.shareImage,
+      font: s.fonts[this.lang.code] ?? null,
+      updatedAt: s.updatedAt,
+    };
+    return admin ? { ...view, translations: s.translations, fonts: s.fonts } : view;
   }
 
   private pageView(row: Page & { translations: Tr }, admin: boolean): Page {

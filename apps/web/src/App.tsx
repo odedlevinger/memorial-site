@@ -4,6 +4,7 @@ import { contentApi, DEFAULT_SITE, type GridColumns, type Language, type Role, t
 import { BUILT_IN_LANGUAGE, I18nProvider, makeI18n, storedLanguage, storeLanguage, useI18n } from './i18n';
 import { useRoute, type Route } from './route';
 import { setFavicon } from './favicon';
+import { applySiteFont } from './fonts';
 import { Header } from './components/Header';
 import { Home } from './components/Home';
 import { GalleryPage } from './components/GalleryPage';
@@ -65,6 +66,7 @@ export default function App(): ReactElement {
     if (!site) return;
     document.title = site.title;
     setFavicon(site.title);
+    applySiteFont(site.font);
   }, [site]);
 
   useEffect(() => {
