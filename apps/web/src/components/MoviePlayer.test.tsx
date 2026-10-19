@@ -106,7 +106,19 @@ describe('MoviePlayer', () => {
     expect(player.seekTo).toHaveBeenCalledWith(0, true);
     expect(player.pauseVideo).toHaveBeenCalled();
     expect(document.querySelector('.movie-poster:not(.gone)')).toBeTruthy(); // covers YouTube's play button
+
+    // The rewind briefly reports playing before the pause lands: stay paused, thumbnail up.
+    state(events, player, 1);
+    expect(player.pauseVideo).toHaveBeenCalledTimes(2);
+    state(events, player, 2);
+    expect(document.querySelector('.movie-poster:not(.gone)')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy();
+
+    // Playing again after that is ordinary playback.
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    expect(player.playVideo).toHaveBeenCalledTimes(1);
+    state(events, player, 1);
+    expect(document.querySelector('.movie-poster.gone')).toBeTruthy();
   });
 
   it('goes full screen and back where the browser allows it', async () => {

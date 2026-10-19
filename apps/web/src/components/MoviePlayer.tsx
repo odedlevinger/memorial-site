@@ -67,6 +67,8 @@ export function MoviePlayer({ id, title }: { readonly id: string; readonly title
   /** 0 for the first load, 1 once reloaded after a blocked autoplay. */
   const [attempt, setAttempt] = useState(0);
   const played = useRef(false);
+  /** Between the end and the pause that follows it, the rewind briefly reports playing. */
+  const rewinding = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -77,14 +79,18 @@ export function MoviePlayer({ id, title }: { readonly id: string; readonly title
         events: {
           onReady: (e) => setPlayer(e.target),
           onStateChange: (e) => {
-            if (e.data === PLAYING) {
+            if (e.data === PLAYING && rewinding.current) e.target.pauseVideo();
+            else if (e.data === PLAYING) {
               played.current = true;
               setPlaying(true);
               setStarted(true);
+            } else if (e.data === PAUSED) {
+              rewinding.current = false;
+              setPlaying(false);
             }
-            else if (e.data === PAUSED) setPlaying(false);
             else if (e.data === ENDED) {
               // Back to the start instead of YouTube's grid of other videos.
+              rewinding.current = true;
               e.target.seekTo(0, true);
               e.target.pauseVideo();
               setPlaying(false);
