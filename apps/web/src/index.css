@@ -1398,7 +1398,10 @@ button.status {
   position: relative;
   aspect-ratio: 16 / 9;
   margin-bottom: 2rem;
+  /* clip, not hidden: a hidden box can still be scrolled, and YouTube focusing its frame
+     would scroll the cropped bands (and its overlays) back into view. */
   overflow: hidden;
+  overflow: clip;
   background: #111;
 }
 
@@ -1411,6 +1414,17 @@ button.status {
   width: 100%;
   height: calc(100% + 160px);
   border: 0;
+}
+
+/* The movie's thumbnail until it first plays. YouTube's 4:3 thumbnail has black bands above
+   and below a 16:9 picture; covering the 16:9 frame crops exactly those bands. */
+.movie-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #111;
 }
 
 /* Takes every click and hover, so YouTube's own overlays never appear. */

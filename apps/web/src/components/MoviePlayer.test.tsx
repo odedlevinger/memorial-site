@@ -54,11 +54,16 @@ describe('MoviePlayer', () => {
     expect(screen.queryByRole('button', { name: 'Play' })).toBeNull();
 
     const { events, player } = ready();
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
-    expect(player.playVideo).toHaveBeenCalledTimes(1);
+    const poster = container.querySelector('.movie-poster') as HTMLImageElement;
+    expect(poster.src).toBe('https://i.ytimg.com/vi/abc123/hqdefault.jpg');
 
-    state(events, player, 1);
+    vi.useFakeTimers();
+    state(events, player, 1); // autoplay
     expect(container.querySelector('.movie-frame.playing')).toBeTruthy();
+    expect(container.querySelector('.movie-poster')).toBeTruthy(); // hides YouTube's start-up icon…
+    act(() => vi.advanceTimersByTime(1200));
+    vi.useRealTimers();
+    expect(container.querySelector('.movie-poster')).toBeNull(); // …then steps aside
     fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
     fireEvent.click(cover);
     expect(player.pauseVideo).toHaveBeenCalledTimes(2);
@@ -67,9 +72,43 @@ describe('MoviePlayer', () => {
     expect(screen.getByRole('button', { name: 'Pause' })).toBeTruthy();
     state(events, player, 2);
     expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy();
+    expect(container.querySelector('.movie-poster')).toBeNull(); // and stays gone when paused
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    expect(player.playVideo).toHaveBeenCalledTimes(1);
 
     unmount();
     expect(player.destroy).toHaveBeenCalled();
+  });
+
+  it('reloads the player on the first play after a blocked autoplay, then plays normally', async () => {
+    const { container } = render(<MoviePlayer id="abc123" title="Home movie" />);
+    await act(async () => undefined);
+    const first = ready();
+    const firstFrame = screen.getByTitle('Home movie');
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    await act(async () => undefined);
+    expect(first.player.playVideo).not.toHaveBeenCalled();
+    expect(first.player.destroy).toHaveBeenCalled();
+    expect(players).toHaveLength(2);
+    expect(screen.getByTitle('Home movie')).not.toBe(firstFrame); // a fresh frame, autoplaying
+    expect(container.querySelector('.movie-poster')).toBeTruthy();
+
+    const second = ready(); // blocked again (some browsers): play the ordinary way
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    expect(second.player.playVideo).toHaveBeenCalledTimes(1);
+    expect(players).toHaveLength(2);
+  });
+
+  it('keeps the thumbnail up if paused straight away', async () => {
+    vi.useFakeTimers();
+    const { container } = render(<MoviePlayer id="abc123" title="Home movie" />);
+    await act(async () => undefined);
+    const { events, player } = ready();
+    state(events, player, 1);
+    state(events, player, 2);
+    act(() => vi.advanceTimersByTime(5000));
+    vi.useRealTimers();
+    expect(container.querySelector('.movie-poster')).toBeTruthy();
   });
 
   it('returns to the start at the end instead of showing other videos', async () => {

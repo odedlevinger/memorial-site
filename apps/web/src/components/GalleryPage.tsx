@@ -169,7 +169,7 @@ function MovieTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
     <article className="movie" aria-labelledby="gallery-title">
       <h1 id="gallery-title" className="page-title">{topic.title}</h1>
       {topic.description && <p className="text-topic-intro">{formatInline(topic.description)}</p>}
-      {id && <MoviePlayer id={id} title={topic.title} />}
+      {id && <MoviePlayer key={id} id={id} title={topic.title} />}
       {topic.body && <RichText body={topic.body} pictures={topic.pictures} onOpen={open} />}
       {viewer}
     </article>
