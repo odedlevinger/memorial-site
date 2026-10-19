@@ -80,7 +80,12 @@ export default function App(): ReactElement {
       <div className="site">
         <Header site={site} topics={topics ?? []} role={role} />
         <main className="site-main">
-          {topics !== null ? renderPage(route, topics, site?.homeRows ?? DEFAULT_SITE.homeRows, role, refresh) : <SiteStatus failed={loadFailed} onRetry={refresh} />}
+          {/* A gallery loads its own topic, so it needn't wait for the list. */}
+          {topics !== null || route.page === 'gallery' ? (
+            renderPage(route, topics ?? [], site?.homeRows ?? DEFAULT_SITE.homeRows, role, refresh)
+          ) : (
+            <SiteStatus failed={loadFailed} onRetry={refresh} />
+          )}
         </main>
         <footer className="site-footer">
           <p>© {new Date().getFullYear()} {site?.title}</p>

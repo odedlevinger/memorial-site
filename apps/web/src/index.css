@@ -1425,6 +1425,11 @@ button.status {
   height: 100%;
   object-fit: cover;
   background: #111;
+  transition: opacity 0.3s;
+}
+
+.movie-poster.gone {
+  opacity: 0;
 }
 
 /* Takes every click and hover, so YouTube's own overlays never appear. */

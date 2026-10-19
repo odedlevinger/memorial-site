@@ -57,13 +57,10 @@ describe('MoviePlayer', () => {
     const poster = container.querySelector('.movie-poster') as HTMLImageElement;
     expect(poster.src).toBe('https://i.ytimg.com/vi/abc123/hqdefault.jpg');
 
-    vi.useFakeTimers();
+    expect(container.querySelector('.movie-poster:not(.gone)')).toBeTruthy(); // covers YouTube's play button…
     state(events, player, 1); // autoplay
     expect(container.querySelector('.movie-frame.playing')).toBeTruthy();
-    expect(container.querySelector('.movie-poster')).toBeTruthy(); // hides YouTube's start-up icon…
-    act(() => vi.advanceTimersByTime(1200));
-    vi.useRealTimers();
-    expect(container.querySelector('.movie-poster')).toBeNull(); // …then steps aside
+    expect(container.querySelector('.movie-poster.gone')).toBeTruthy(); // …until it plays
     fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
     fireEvent.click(cover);
     expect(player.pauseVideo).toHaveBeenCalledTimes(2);
@@ -72,7 +69,7 @@ describe('MoviePlayer', () => {
     expect(screen.getByRole('button', { name: 'Pause' })).toBeTruthy();
     state(events, player, 2);
     expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy();
-    expect(container.querySelector('.movie-poster')).toBeNull(); // and stays gone when paused
+    expect(container.querySelector('.movie-poster.gone')).toBeTruthy(); // and stays gone when paused
     fireEvent.click(screen.getByRole('button', { name: 'Play' }));
     expect(player.playVideo).toHaveBeenCalledTimes(1);
 
@@ -91,7 +88,7 @@ describe('MoviePlayer', () => {
     expect(first.player.destroy).toHaveBeenCalled();
     expect(players).toHaveLength(2);
     expect(screen.getByTitle('Home movie')).not.toBe(firstFrame); // a fresh frame, autoplaying
-    expect(container.querySelector('.movie-poster')).toBeTruthy();
+    expect(container.querySelector('.movie-poster:not(.gone)')).toBeTruthy();
 
     const second = ready(); // blocked again (some browsers): play the ordinary way
     fireEvent.click(screen.getByRole('button', { name: 'Play' }));
@@ -99,26 +96,16 @@ describe('MoviePlayer', () => {
     expect(players).toHaveLength(2);
   });
 
-  it('keeps the thumbnail up if paused straight away', async () => {
-    vi.useFakeTimers();
-    const { container } = render(<MoviePlayer id="abc123" title="Home movie" />);
-    await act(async () => undefined);
-    const { events, player } = ready();
-    state(events, player, 1);
-    state(events, player, 2);
-    act(() => vi.advanceTimersByTime(5000));
-    vi.useRealTimers();
-    expect(container.querySelector('.movie-poster')).toBeTruthy();
-  });
-
   it('returns to the start at the end instead of showing other videos', async () => {
     render(<MoviePlayer id="abc123" title="Home movie" />);
     await act(async () => undefined);
     const { events, player } = ready();
     state(events, player, 1);
+    expect(document.querySelector('.movie-poster.gone')).toBeTruthy();
     state(events, player, 0);
     expect(player.seekTo).toHaveBeenCalledWith(0, true);
     expect(player.pauseVideo).toHaveBeenCalled();
+    expect(document.querySelector('.movie-poster:not(.gone)')).toBeTruthy(); // covers YouTube's play button
     expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy();
   });
 
