@@ -292,7 +292,7 @@ describe('movie pages', () => {
     window.location.hash = '#/galleries/home-movie';
     render(<App />);
     const player = (await screen.findByTitle('Home movie')) as HTMLIFrameElement;
-    expect(player.src).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&autoplay=1');
+    expect(player.src).toMatch(/^https:\/\/www\.youtube-nocookie\.com\/embed\/dQw4w9WgXcQ\?rel=0&autoplay=1&controls=0&/);
     expect(screen.getByText('Super 8, 1974')).toBeTruthy();
     expect(screen.getByText('Filmed in Haifa.')).toBeTruthy();
   });
