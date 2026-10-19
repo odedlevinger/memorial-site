@@ -5,7 +5,13 @@ import { useI18n } from '../i18n';
 // A YouTube movie with only play/pause and full screen. YouTube's own controls are off, a
 // layer over the video takes every click (so hovering never brings up YouTube's title,
 // logo or share buttons), and the frame is cropped so its top and bottom overlays fall
-// outside the visible area. Driven through the YouTube IFrame Player API.
+// outside the visible area. The movie's thumbnail covers the frame until it has played for
+// a moment, hiding YouTube's big play button (shown when the browser blocks autoplay), its
+// loading spinner and the pause icon it flashes in the middle as playback first starts.
+// When the browser blocks autoplay, YouTube's player switches to a mode that shows its own
+// play/pause icon in the middle on every toggle; so the first press of play then reloads
+// the player instead, which autoplays cleanly now that the click allows sound.
+// Driven through the YouTube IFrame Player API.
 
 /** The part of YouTube's player object this page uses. */
 export interface YouTubePlayer {
@@ -35,6 +41,8 @@ declare global {
 const PLAYING = 1;
 const PAUSED = 2;
 const ENDED = 0;
+/** How long YouTube's start-of-playback icon stays in the middle of the video. */
+const START_FLASH_MS = 1200;
 
 let api: Promise<YouTubeApi> | null = null;
 
@@ -55,6 +63,10 @@ export function MoviePlayer({ id, title }: { readonly id: string; readonly title
   const iframe = useRef<HTMLIFrameElement>(null);
   const [player, setPlayer] = useState<YouTubePlayer | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [started, setStarted] = useState(false);
+  /** 0 for the first load, 1 once reloaded after a blocked autoplay. */
+  const [attempt, setAttempt] = useState(0);
+  const played = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -65,7 +77,10 @@ export function MoviePlayer({ id, title }: { readonly id: string; readonly title
         events: {
           onReady: (e) => setPlayer(e.target),
           onStateChange: (e) => {
-            if (e.data === PLAYING) setPlaying(true);
+            if (e.data === PLAYING) {
+              played.current = true;
+              setPlaying(true);
+            }
             else if (e.data === PAUSED) setPlaying(false);
             else if (e.data === ENDED) {
               // Back to the start instead of YouTube's grid of other videos.
@@ -82,12 +97,20 @@ export function MoviePlayer({ id, title }: { readonly id: string; readonly title
       created?.destroy();
       setPlayer(null);
       setPlaying(false);
+      setStarted(false);
     };
-  }, [id]);
+  }, [id, attempt]);
+
+  useEffect(() => {
+    if (!playing || started) return;
+    const timer = setTimeout(() => setStarted(true), START_FLASH_MS);
+    return (): void => clearTimeout(timer);
+  }, [playing, started]);
 
   const toggle = (): void => {
     if (!player) return;
     if (playing) player.pauseVideo();
+    else if (!played.current && attempt === 0) setAttempt(1);
     else player.playVideo();
   };
   const fullScreen = (): void => {
@@ -99,6 +122,7 @@ export function MoviePlayer({ id, title }: { readonly id: string; readonly title
   return (
     <div ref={frame} className={`movie-frame${playing ? ' playing' : ''}`}>
       <iframe
+        key={attempt}
         ref={iframe}
         src={`https://www.youtube-nocookie.com/embed/${id}?rel=0&autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&playsinline=1&enablejsapi=1&origin=${origin}`}
         title={title}
@@ -106,6 +130,7 @@ export function MoviePlayer({ id, title }: { readonly id: string; readonly title
         referrerPolicy="strict-origin-when-cross-origin"
         tabIndex={-1}
       />
+      {!started && <img className="movie-poster" src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" />}
       <div className="movie-cover" onClick={toggle} aria-hidden="true" />
       {player && (
         <div className="movie-controls">
