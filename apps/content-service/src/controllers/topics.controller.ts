@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { CreateTopicDto, OrderDto, UpdateTopicDto } from '../dto/content.dto.js';
+import { CreateTopicDto, OrderDto, SetVideoDto, UpdateTopicDto, VideoUploadDto } from '../dto/content.dto.js';
 import { CurrentCaller, RequireRole, RolesGuard } from '../guards/roles.guard.js';
-import type { Caller, TopicDetailView, TopicView } from '../interfaces/content.interfaces.js';
+import type { Caller, TopicDetailView, TopicView, VideoUploadView } from '../interfaces/content.interfaces.js';
 import { LanguagesService } from '../services/languages.service.js';
 import { TopicsService } from '../services/topics.service.js';
 
@@ -65,6 +65,41 @@ export class TopicsController {
     @Query('lang') lang?: string,
   ): Promise<TopicDetailView> {
     return this.topics.update(id, dto, caller, await this.languages.context(lang, true));
+  }
+
+  @Post(':id/video-upload')
+  @ApiOperation({ summary: 'Start uploading a movie\'s video file — the browser PUTs the file to uploadUrl, then confirms with PUT video' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 201, description: 'Upload URL and the path to confirm' })
+  @ApiResponse({ status: 400, description: 'Validation error / not a movie page' })
+  @ApiResponse({ status: 404, description: 'Topic not found' })
+  startVideoUpload(@Param('id', ParseUUIDPipe) id: string, @Body() dto: VideoUploadDto, @CurrentCaller() caller: Caller): Promise<VideoUploadView> {
+    return this.topics.startVideoUpload(id, dto, caller);
+  }
+
+  @Put(':id/video')
+  @ApiOperation({ summary: 'Use an uploaded file as the movie\'s video (replaces and deletes the previous one)' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Updated topic' })
+  @ApiResponse({ status: 400, description: 'Validation error / not a movie page / upload not finished / file too large' })
+  @ApiResponse({ status: 404, description: 'Topic not found' })
+  @ApiResponse({ status: 409, description: 'The file belongs to another page' })
+  async setVideo(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetVideoDto,
+    @CurrentCaller() caller: Caller,
+    @Query('lang') lang?: string,
+  ): Promise<TopicDetailView> {
+    return this.topics.setVideo(id, dto.path, caller, await this.languages.context(lang, true));
+  }
+
+  @Delete(':id/video')
+  @ApiOperation({ summary: 'Remove the movie\'s video file (the page falls back to its YouTube link)' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Updated topic' })
+  @ApiResponse({ status: 404, description: 'Topic not found' })
+  async removeVideo(@Param('id', ParseUUIDPipe) id: string, @CurrentCaller() caller: Caller, @Query('lang') lang?: string): Promise<TopicDetailView> {
+    return this.topics.removeVideo(id, caller, await this.languages.context(lang, true));
   }
 
   @Delete(':id')

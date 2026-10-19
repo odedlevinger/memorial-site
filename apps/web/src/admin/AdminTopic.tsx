@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactElement } from 'react';
-import { contentApi, type ContentStatus, type GridColumns, type Language, type Picture, type TopicDetail, type TopicKind } from '../content';
+import {
+  contentApi,
+  type ContentStatus,
+  type GridColumns,
+  type Language,
+  MAX_VIDEO_BYTES,
+  type Picture,
+  type TopicDetail,
+  type TopicKind,
+  VIDEO_FILE_TYPES,
+} from '../content';
 import { youtubeId } from '../components/GalleryPage';
 import { photoRef } from '../components/RichText';
 import { hrefFor } from '../route';
@@ -56,6 +66,8 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [upload, setUpload] = useState<{ done: number; total: number } | null>(null);
+  /** Share of the movie's video file sent so far (0–1), while uploading. */
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
   const bodyBox = useRef<HTMLTextAreaElement>(null);
   /** Unsaved edits survive reloads (an upload, a new cover) until saved or the language changes. */
   const dirty = useRef(false);
@@ -130,6 +142,29 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
         setUpload({ done: i + 1, total: files.length });
       }
     }, `Uploaded ${files.length} picture${files.length === 1 ? '' : 's'} as drafts`).finally(() => setUpload(null));
+  };
+
+  const onVideo = (e: ChangeEvent<HTMLInputElement>): void => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    if (!(VIDEO_FILE_TYPES as readonly string[]).includes(f.type)) {
+      setMessage(null);
+      setError('Choose an MP4, WebM or MOV video file.');
+      return;
+    }
+    if (f.size > MAX_VIDEO_BYTES) {
+      setMessage(null);
+      setError('That video is larger than 2 GB.');
+      return;
+    }
+    setVideoProgress(0);
+    void run(() => contentApi.uploadVideo(id, f, setVideoProgress), 'Video uploaded').finally(() => setVideoProgress(null));
+  };
+
+  const removeVideo = (): void => {
+    if (!window.confirm('Remove the uploaded video file? The page goes back to its YouTube link, if it has one.')) return;
+    void run(() => contentApi.removeVideo(id), 'Video file removed');
   };
 
   const set = <K extends keyof Fields>(k: K, v: Fields[K]): void => {
@@ -217,6 +252,28 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
       </form>
       {message && <p className="notice" role="status">{message}</p>}
       {error && <p className="error" role="alert">{error}</p>}
+
+      {t.kind === 'movie' && (
+        <>
+          <h2 className="admin-h2">Video file</h2>
+          {t.videoFile ? (
+            <div className="admin-video">
+              <video src={t.videoFile} controls preload="metadata" aria-label="Uploaded video" />
+              <button className="btn danger" type="button" onClick={removeVideo}>Remove video file</button>
+            </div>
+          ) : (
+            <p className="empty">No video file yet{t.videoUrl ? ' — the page plays the YouTube link.' : '.'}</p>
+          )}
+          <label className="btn upload">
+            {videoProgress !== null ? `Uploading ${Math.round(videoProgress * 100)}%…` : t.videoFile ? 'Replace video file' : 'Upload video file'}
+            <input type="file" accept={VIDEO_FILE_TYPES.join(',')} hidden disabled={videoProgress !== null} onChange={onVideo} aria-label="Upload video file" />
+          </label>
+          <p className="admin-help">
+            The page plays this file instead of the YouTube link, with only play/pause and full screen. MP4 plays in every browser; up to 2 GB. Keep
+            this page open until the upload finishes.
+          </p>
+        </>
+      )}
 
       <h2 className="admin-h2">Pictures</h2>
       <label className="btn upload">

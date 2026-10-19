@@ -29,6 +29,7 @@ import { SiteSummaryService } from '../services/site-summary.service.js';
 import { PicturesService } from '../services/pictures.service.js';
 import { IDENTITY_LOOKUP, RolesService } from '../services/roles.service.js';
 import { TopicsService } from '../services/topics.service.js';
+import { VideosService } from '../services/videos.service.js';
 
 export const OWNER = { id: '11111111-1111-4111-8111-111111111111', email: 'owner@example.com' };
 export const EDITOR = { id: '22222222-2222-4222-8222-222222222222', email: 'editor@example.com' };
@@ -45,6 +46,15 @@ export class MemoryImageStore implements ImageStore {
   }
   publicUrl(path: string): string {
     return `https://img.test/${path}`;
+  }
+  /** Uploads started, by path; a test "uploads" by putting a file at that path. */
+  readonly uploads = new Map<string, { contentType: string; origin: string }>();
+  async createUpload(path: string, contentType: string, origin: string): Promise<string> {
+    this.uploads.set(path, { contentType, origin });
+    return `https://upload.test/${path}`;
+  }
+  async sizeOf(path: string): Promise<number | null> {
+    return this.files.get(path)?.length ?? null;
   }
 }
 
@@ -76,6 +86,7 @@ export async function createHarness(): Promise<Harness> {
       AuditService,
       ImagesService,
       TopicsService,
+      VideosService,
       PicturesService,
       EditorsService,
       PagesService,

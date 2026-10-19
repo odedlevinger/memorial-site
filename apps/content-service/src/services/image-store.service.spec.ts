@@ -21,6 +21,14 @@ describe('LocalImageStore', () => {
     await expect(stat(join(dir, 'pictures/abc'))).rejects.toThrow();
     expect(store.publicUrl('pictures/abc/thumb.jpg')).toBe('http://localhost:3002/content/files/pictures/abc/thumb.jpg');
   });
+
+  it('uploads to the public URL and reports stored sizes', async () => {
+    const store = new LocalImageStore(dir, 'http://localhost:3002/content/files');
+    expect(await store.createUpload('videos/v/video.mp4')).toBe('http://localhost:3002/content/files/videos/v/video.mp4');
+    expect(await store.sizeOf('videos/v/video.mp4')).toBeNull();
+    await store.put('videos/v/video.mp4', Buffer.from('abc'));
+    expect(await store.sizeOf('videos/v/video.mp4')).toBe(3);
+  });
 });
 
 describe('GcsImageStore', () => {
@@ -43,6 +51,23 @@ describe('GcsImageStore', () => {
     await store.remove('pictures/a');
     expect(deleteFiles).toHaveBeenCalledWith({ prefix: 'pictures/a/', force: true });
     expect(store.publicUrl('pictures/a/thumb.jpg')).toBe('https://storage.googleapis.com/photos/pictures/a/thumb.jpg');
+  });
+
+  it('starts browser uploads for the page\'s origin and reports stored sizes', async () => {
+    const createResumableUpload = jest.fn().mockResolvedValue(['https://upload.example/session']);
+    const exists = jest.fn().mockResolvedValueOnce([false]).mockResolvedValueOnce([true]);
+    const getMetadata = jest.fn().mockResolvedValue([{ size: '1234' }]);
+    const file = jest.fn().mockReturnValue({ createResumableUpload, exists, getMetadata });
+    const store = new GcsImageStore({ bucket: jest.fn().mockReturnValue({ file }) } as unknown as Storage, 'photos');
+
+    expect(await store.createUpload('videos/v/video.mp4', 'video/mp4', 'https://example.org')).toBe('https://upload.example/session');
+    expect(file).toHaveBeenCalledWith('videos/v/video.mp4');
+    expect(createResumableUpload).toHaveBeenCalledWith({
+      origin: 'https://example.org',
+      metadata: { contentType: 'video/mp4', cacheControl: 'public, max-age=31536000, immutable' },
+    });
+    expect(await store.sizeOf('videos/v/video.mp4')).toBeNull();
+    expect(await store.sizeOf('videos/v/video.mp4')).toBe(1234);
   });
 
   it('builds URLs under a public base (the site\'s /media proxy) when given', () => {

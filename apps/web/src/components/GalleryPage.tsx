@@ -6,6 +6,7 @@ import { hrefFor } from '../route';
 import { formatInline } from './Formatting';
 import { Lightbox } from './Lightbox';
 import { MoviePlayer } from './MoviePlayer';
+import { VideoFilePlayer } from './VideoFilePlayer';
 import { RichText } from './RichText';
 import { NotFound } from './TextPages';
 
@@ -161,7 +162,7 @@ export function youtubeId(url: string): string | null {
   return m ? (m[1] as string) : null;
 }
 
-/** A YouTube movie that starts playing on arrival, with optional text below. */
+/** A movie that starts playing on arrival, with optional text below: the uploaded file, else the YouTube link. */
 function MovieTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
   const { open, viewer } = useViewer(topic.title, topic.pictures);
   const id = topic.videoUrl ? youtubeId(topic.videoUrl) : null;
@@ -169,7 +170,11 @@ function MovieTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
     <article className="movie" aria-labelledby="gallery-title">
       <h1 id="gallery-title" className="page-title">{topic.title}</h1>
       {topic.description && <p className="text-topic-intro">{formatInline(topic.description)}</p>}
-      {id && <MoviePlayer key={id} id={id} title={topic.title} />}
+      {topic.videoFile ? (
+        <VideoFilePlayer key={topic.videoFile} src={topic.videoFile} title={topic.title} poster={topic.cover?.display ?? null} />
+      ) : (
+        id && <MoviePlayer key={id} id={id} title={topic.title} />
+      )}
       {topic.body && <RichText body={topic.body} pictures={topic.pictures} onOpen={open} />}
       {viewer}
     </article>

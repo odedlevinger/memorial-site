@@ -297,6 +297,30 @@ describe('movie pages', () => {
     expect(screen.getByText('Filmed in Haifa.')).toBeTruthy();
   });
 
+  it('plays an uploaded video file instead of the YouTube link, with the cover as its poster', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    const t = server.addTopic('Home movie', 'published', 0, 'movie');
+    server.addPicture(t.id, 'published');
+    Object.assign(t, { videoUrl: 'https://youtu.be/dQw4w9WgXcQ', videoFile: 'https://img.test/videos/v/video.mp4' });
+    window.location.hash = '#/galleries/home-movie';
+    render(<App />);
+    const video = (await screen.findByTitle('Home movie')) as HTMLVideoElement;
+    expect(video.tagName).toBe('VIDEO');
+    expect(video.getAttribute('src')).toBe('https://img.test/videos/v/video.mp4');
+    expect(video.getAttribute('poster')).toMatch(/display/);
+    expect(document.querySelector('iframe')).toBeNull();
+  });
+
+  it('plays an uploaded video file without a poster when the movie has no cover', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    const t = server.addTopic('Home movie', 'published', 0, 'movie');
+    t.videoFile = 'https://img.test/videos/v/video.mp4';
+    window.location.hash = '#/galleries/home-movie';
+    render(<App />);
+    const video = (await screen.findByTitle('Home movie')) as HTMLVideoElement;
+    expect(video.hasAttribute('poster')).toBe(false);
+  });
+
   it('opens a movie without waiting for the list of galleries', async () => {
     const t = server.addTopic('Home movie', 'published', 0, 'movie');
     t.videoUrl = 'https://youtu.be/dQw4w9WgXcQ';
