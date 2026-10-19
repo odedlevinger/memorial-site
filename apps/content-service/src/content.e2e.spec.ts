@@ -210,6 +210,113 @@ describe('topics', () => {
   });
 });
 
+describe('movie video files', () => {
+  const ORIGIN = 'https://lavilipshitz.co.il';
+  const PATH = /^videos\/[0-9a-f-]{36}\/video\.mp4$/;
+
+  beforeEach(async () => {
+    await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);
+  });
+
+  async function createMovie(title = 'Home movie'): Promise<string> {
+    return (await http().post('/content/topics').set(as(EDITOR)).send({ title, kind: 'movie' }).expect(201)).body.id as string;
+  }
+
+  /** Starts an upload and stores the "uploaded" file; returns its path. */
+  async function uploadVideo(id: string, bytes = 3): Promise<string> {
+    const res = await http().post(`/content/topics/${id}/video-upload`).set(as(EDITOR)).send({ contentType: 'video/mp4', size: bytes, origin: ORIGIN }).expect(201);
+    const path = res.body.path as string;
+    store.files.set(path, Buffer.alloc(bytes));
+    return path;
+  }
+
+  it('uploads straight to storage, then plays the file on the public page', async () => {
+    const id = await createMovie();
+    expect((await http().get(`/content/topics/${id}`).set(as(EDITOR)).expect(200)).body.videoFile).toBeNull();
+
+    const start = await http().post(`/content/topics/${id}/video-upload`).set(as(EDITOR)).send({ contentType: 'video/mp4', size: 10, origin: ORIGIN }).expect(201);
+    const path = start.body.path as string;
+    expect(path).toMatch(PATH);
+    expect(start.body.uploadUrl).toBe(`https://upload.test/${path}`);
+    expect(store.uploads.get(path)).toEqual({ contentType: 'video/mp4', origin: ORIGIN });
+
+    // not uploaded yet
+    await http().put(`/content/topics/${id}/video`).set(as(EDITOR)).send({ path }).expect(400);
+    store.files.set(path, Buffer.alloc(10));
+    const set = await http().put(`/content/topics/${id}/video`).set(as(EDITOR)).send({ path }).expect(200);
+    expect(set.body.videoFile).toBe(`https://img.test/${path}`);
+    // confirming the same file again keeps it
+    await http().put(`/content/topics/${id}/video`).set(as(EDITOR)).send({ path }).expect(200);
+    expect(store.files.has(path)).toBe(true);
+
+    await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ status: 'published' }).expect(200);
+    expect((await http().get('/content/public/topics/home-movie').expect(200)).body.videoFile).toBe(`https://img.test/${path}`);
+
+    // a new file replaces the old one, which is deleted
+    const next = await uploadVideo(id);
+    await http().put(`/content/topics/${id}/video`).set(as(EDITOR)).send({ path: next }).expect(200);
+    expect(store.files.has(path)).toBe(false);
+
+    const removed = await http().delete(`/content/topics/${id}/video`).set(as(EDITOR)).expect(200);
+    expect(removed.body.videoFile).toBeNull();
+    expect(store.files.has(next)).toBe(false);
+    // removing again is harmless
+    await http().delete(`/content/topics/${id}/video`).set(as(EDITOR)).expect(200);
+  });
+
+  it('accepts WebM and QuickTime too, and deletes the file with the page', async () => {
+    const id = await createMovie();
+    const webm = await http().post(`/content/topics/${id}/video-upload`).set(as(EDITOR)).send({ contentType: 'video/webm', size: 1, origin: 'http://localhost:5173' }).expect(201);
+    expect(webm.body.path).toMatch(/\/video\.webm$/);
+    const mov = await http().post(`/content/topics/${id}/video-upload`).set(as(EDITOR)).send({ contentType: 'video/quicktime', size: 1, origin: ORIGIN }).expect(201);
+    expect(mov.body.path).toMatch(/\/video\.mov$/);
+    store.files.set(mov.body.path as string, Buffer.alloc(1));
+    await http().put(`/content/topics/${id}/video`).set(as(EDITOR)).send({ path: mov.body.path }).expect(200);
+    await http().delete(`/content/topics/${id}`).set(as(EDITOR)).expect(204);
+    expect(store.files.has(mov.body.path as string)).toBe(false);
+  });
+
+  it('validates the request, the page and who is asking', async () => {
+    const id = await createMovie();
+    const ok = { contentType: 'video/mp4', size: 1, origin: ORIGIN };
+    for (const bad of [
+      { ...ok, contentType: 'video/x-msvideo' },
+      { ...ok, size: 0 },
+      { ...ok, size: 2 * 1024 ** 3 + 1 },
+      { ...ok, size: 1.5 },
+      { ...ok, origin: 'https://lavilipshitz.co.il/admin' },
+      { ...ok, origin: 'ftp://lavilipshitz.co.il' },
+      { contentType: 'video/mp4', size: 1 },
+    ]) {
+      await http().post(`/content/topics/${id}/video-upload`).set(as(EDITOR)).send(bad).expect(400);
+    }
+    for (const path of ['videos/x/video.mp4', 'pictures/0b6f2c8e-6a1f-4f8e-9d1c-2f0a1b2c3d4e/display.jpg', '../videos/0b6f2c8e-6a1f-4f8e-9d1c-2f0a1b2c3d4e/video.mp4']) {
+      await http().put(`/content/topics/${id}/video`).set(as(EDITOR)).send({ path }).expect(400);
+    }
+
+    const pictures = await createTopic('Pictures');
+    await http().post(`/content/topics/${pictures.id}/video-upload`).set(as(EDITOR)).send(ok).expect(400);
+    const path = await uploadVideo(id);
+    await http().put(`/content/topics/${pictures.id}/video`).set(as(EDITOR)).send({ path }).expect(400);
+
+    await http().post(`/content/topics/${UNKNOWN_ID}/video-upload`).set(as(EDITOR)).send(ok).expect(404);
+    await http().put(`/content/topics/${UNKNOWN_ID}/video`).set(as(EDITOR)).send({ path }).expect(404);
+    await http().delete(`/content/topics/${UNKNOWN_ID}/video`).set(as(EDITOR)).expect(404);
+    await http().post(`/content/topics/${id}/video-upload`).set(as(VIEWER)).send(ok).expect(403);
+    await http().put(`/content/topics/${id}/video`).set(as(VIEWER)).send({ path }).expect(403);
+    await http().delete(`/content/topics/${id}/video`).set(as(VIEWER)).expect(403);
+    await http().post(`/content/topics/${id}/video-upload`).send(ok).expect(401);
+  });
+
+  it('won\'t share one file between two pages', async () => {
+    const first = await createMovie('First');
+    const second = await createMovie('Second');
+    const path = await uploadVideo(first);
+    await http().put(`/content/topics/${first}/video`).set(as(EDITOR)).send({ path }).expect(200);
+    await http().put(`/content/topics/${second}/video`).set(as(EDITOR)).send({ path }).expect(409);
+  });
+});
+
 describe('page kinds (text / book / movie)', () => {
   beforeEach(async () => {
     await http().post('/content/editors').set(as(OWNER)).send({ email: EDITOR.email }).expect(201);

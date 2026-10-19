@@ -40,6 +40,10 @@ export class TopicEntity {
   @Column({ type: 'varchar', length: 500, nullable: true })
   videoUrl!: string | null;
 
+  /** Movie pages: the uploaded video file's storage path (videos/<uuid>/video.<ext>). */
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  videoKey!: string | null;
+
   /** Picture sets: how many pictures the website shows in one row (1–3). */
   @Column({ type: 'smallint', default: 3 })
   columns!: GridColumns;

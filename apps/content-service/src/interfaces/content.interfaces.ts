@@ -70,6 +70,8 @@ export interface TopicDetailView extends TopicView {
   readonly buyLabel: string | null;
   /** Movie pages: the YouTube link (watch, youtu.be, shorts or embed). */
   readonly videoUrl: string | null;
+  /** Movie pages: URL of the uploaded video file; the website plays it instead of YouTube. */
+  readonly videoFile: string | null;
   /** Picture sets: how many pictures are shown in one row (1–3). */
   readonly columns: GridColumns;
 }
@@ -93,11 +95,29 @@ export interface StoredImage {
   readonly height: number;
 }
 
-/** Blob storage for images (Cloud Storage in prod, local disk / memory in dev & tests). */
+/** Blob storage for images and videos (Cloud Storage in prod, local disk / memory in dev & tests). */
 export interface ImageStore {
   put(path: string, data: Buffer, contentType: string): Promise<void>;
   remove(prefix: string): Promise<void>;
   publicUrl(path: string): string;
+  /**
+   * Starts an upload the browser sends straight to storage (videos are far beyond Cloud
+   * Run's 32 MB request cap). Returns the URL the browser PUTs the file to; `origin` is the
+   * page doing the upload, so storage allows its cross-origin requests.
+   */
+  createUpload(path: string, contentType: string, origin: string): Promise<string>;
+  /** The stored object's size in bytes, or null when there is none. */
+  sizeOf(path: string): Promise<number | null>;
+}
+
+/** Video file types the website plays (MP4 everywhere; WebM and QuickTime in most browsers). */
+export const VIDEO_TYPES = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' } as const;
+export type VideoType = keyof typeof VIDEO_TYPES;
+
+/** Where the browser sends a movie's video file, and the path to confirm once it's there. */
+export interface VideoUploadView {
+  readonly uploadUrl: string;
+  readonly path: string;
 }
 
 /** The fixed site pages whose text editors can change. */

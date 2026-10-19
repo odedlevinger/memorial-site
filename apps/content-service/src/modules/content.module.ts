@@ -36,6 +36,7 @@ import { PicturesService } from '../services/pictures.service.js';
 import { IDENTITY_LOOKUP, RolesService } from '../services/roles.service.js';
 import { SeedService } from '../services/seed.service.js';
 import { TopicsService } from '../services/topics.service.js';
+import { VideosService } from '../services/videos.service.js';
 
 export const ENTITIES = [TopicEntity, PictureEntity, EditorEntity, PageEntity, SiteEntity, LanguageEntity, DailySignInEntity, AuditLogEntity, OwnerEntity];
 
@@ -80,6 +81,7 @@ export function typeOrmOptions(config: ConfigService): TypeOrmModuleOptions {
     AuditService,
     ImagesService,
     TopicsService,
+    VideosService,
     PicturesService,
     EditorsService,
     PagesService,

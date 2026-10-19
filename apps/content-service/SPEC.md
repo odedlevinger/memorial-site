@@ -89,6 +89,8 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
     90 days, in the site's time zone, `SITE_TIME_ZONE`, default Asia/Jerusalem). A person
     counts once per day however many visits, sessions or devices; only the day and user id
     are stored. Visitors who don't sign in are not counted.
+14. Movie pages: upload a video file (MP4, WebM or MOV, up to 2 GB), replace it, or remove
+    it. The browser sends the file straight to storage; a new file deletes the old one.
 
 ## 4. Public site behaviour
 
@@ -97,6 +99,8 @@ Status: draft for review · Requirements source: owner answers, 2026-10-16.
 - A published topic with no published pictures is not shown.
 - The viewer shows caption, date, place and story when present.
 - The About and Contact pages show their current text.
+- A movie page plays its uploaded video file with only play/pause and full screen (no
+  YouTube overlays), else its YouTube link. It starts on arrival where the browser allows.
 - Reads take `?lang=<code>`; text comes back in that language, falling back to the default
   language field by field. An unknown code reads as the default language.
 - Changes are visible on the public site within 1 minute of saving.
@@ -123,7 +127,6 @@ replaced or deleted like anything else. Import runs once.
 
 - Sending invitation emails; editor self-registration.
 - Comments, likes, or visitor submissions.
-- Video.
 - Version history / undo beyond the audit log.
 - Language-specific slugs / URLs, and automatic (machine) translation.
 

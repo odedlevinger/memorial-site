@@ -5,12 +5,15 @@ import {
   IsArray,
   IsEmail,
   IsIn,
+  IsInt,
   IsOptional,
   IsUrl,
   IsString,
   IsUUID,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
   ValidateBy,
   ValidateIf,
@@ -24,7 +27,10 @@ import {
   type GridColumns,
   TOPIC_KINDS,
   type TopicKind,
+  VIDEO_TYPES,
+  type VideoType,
 } from '../interfaces/content.interfaces.js';
+import { MAX_VIDEO_BYTES, VIDEO_PATH } from '../services/videos.service.js';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /** A YouTube page or short link (the web client turns it into a privacy-enhanced embed). */
@@ -288,4 +294,27 @@ export class UpdateLanguageDto {
     },
   })
   labels?: Record<string, string>;
+}
+
+export class VideoUploadDto {
+  @ApiProperty({ enum: Object.keys(VIDEO_TYPES), description: 'the file\'s type; MP4 plays in every browser' })
+  @IsIn(Object.keys(VIDEO_TYPES))
+  contentType!: VideoType;
+
+  @ApiProperty({ minimum: 1, maximum: MAX_VIDEO_BYTES, description: 'file size in bytes' })
+  @IsInt()
+  @Min(1)
+  @Max(MAX_VIDEO_BYTES, { message: 'Video is larger than 2 GB' })
+  size!: number;
+
+  @ApiProperty({ example: 'https://lavilipshitz.co.il', description: 'the page doing the upload (allowed to send the file cross-origin)' })
+  @IsUrl({ require_protocol: true, protocols: ['http', 'https'], require_tld: false })
+  @Matches(/^https?:\/\/[^/]+$/, { message: 'origin must be a scheme and host, with no path' })
+  origin!: string;
+}
+
+export class SetVideoDto {
+  @ApiProperty({ example: 'videos/0b6f2c8e-6a1f-4f8e-9d1c-2f0a1b2c3d4e/video.mp4', description: 'the path from POST video-upload' })
+  @Matches(VIDEO_PATH, { message: 'path must be one handed out by video-upload' })
+  path!: string;
 }

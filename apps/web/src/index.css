@@ -1432,6 +1432,16 @@ button.status {
   opacity: 0;
 }
 
+/* An uploaded movie file fills the frame, letterboxed if it isn't 16:9. */
+.movie-frame video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #111;
+}
+
 /* Takes every click and hover, so YouTube's own overlays never appear. */
 .movie-cover {
   position: absolute;
@@ -1486,6 +1496,20 @@ button.status {
 .movie-frame:fullscreen {
   aspect-ratio: auto;
   margin: 0;
+}
+
+.admin-video {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-video video {
+  width: min(100%, 24rem);
+  aspect-ratio: 16 / 9;
+  background: #111;
 }
 
 .movie .rich-text {

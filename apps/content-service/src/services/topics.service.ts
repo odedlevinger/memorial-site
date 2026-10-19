@@ -1,12 +1,13 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, type Repository } from 'typeorm';
+import { In, Not, type Repository } from 'typeorm';
 import { PictureEntity } from '../entities/picture.entity.js';
 import { TopicEntity } from '../entities/topic.entity.js';
-import type { CreateTopicDto, UpdateTopicDto } from '../dto/content.dto.js';
-import type { Caller, LangContext, PictureImages, PictureView, TopicDetailView, TopicView } from '../interfaces/content.interfaces.js';
+import type { CreateTopicDto, UpdateTopicDto, VideoUploadDto } from '../dto/content.dto.js';
+import type { Caller, LangContext, PictureImages, PictureView, TopicDetailView, TopicView, VideoUploadView } from '../interfaces/content.interfaces.js';
 import { AuditService } from './audit.service.js';
 import { ImagesService } from './images.service.js';
+import { VideosService } from './videos.service.js';
 import { requireText, setText, textOf, translationsOf } from './translations.js';
 
 export function slugify(title: string): string {
@@ -46,6 +47,7 @@ export class TopicsService {
     @InjectRepository(TopicEntity) private readonly topics: Repository<TopicEntity>,
     @InjectRepository(PictureEntity) private readonly pictures: Repository<PictureEntity>,
     private readonly images: ImagesService,
+    private readonly videos: VideosService,
     private readonly audit: AuditService,
   ) {}
 
@@ -98,6 +100,7 @@ export class TopicsService {
         buyUrl: null,
         buyLabel: null,
         videoUrl: null,
+        videoKey: null,
         columns: 3,
         position: last.length > 0 ? (last[0] as TopicEntity).position + 1 : 0,
         status: 'draft',
@@ -143,9 +146,44 @@ export class TopicsService {
     const topic = await this.require(id);
     const pics = await this.pictures.findBy({ topicId: id });
     for (const p of pics) await this.images.remove(p.storageKey);
+    if (topic.videoKey) await this.videos.remove(topic.videoKey);
     await this.pictures.delete({ topicId: id });
     await this.topics.delete({ id });
     await this.audit.record(actor, 'topic.delete', id, { title: topic.title, pictures: pics.length });
+  }
+
+  // ── movie video files ────────────────────────────────────────────────────
+
+  /** Where the browser sends a movie's video file; nothing changes until setVideo. */
+  async startVideoUpload(id: string, dto: VideoUploadDto, actor: Caller): Promise<VideoUploadView> {
+    await this.requireMovie(id);
+    const upload = await this.videos.startUpload(dto.contentType, dto.origin);
+    await this.audit.record(actor, 'topic.video.upload', id, { path: upload.path, contentType: dto.contentType, size: dto.size });
+    return upload;
+  }
+
+  /** Makes the uploaded file at `path` the movie's video, replacing (and deleting) any previous one. */
+  async setVideo(id: string, path: string, actor: Caller, lang: LangContext): Promise<TopicDetailView> {
+    const topic = await this.requireMovie(id);
+    if (await this.topics.findOneBy({ id: Not(id), videoKey: path })) throw new ConflictException('That video belongs to another page');
+    await this.videos.confirm(path);
+    const previous = topic.videoKey;
+    topic.videoKey = path;
+    await this.topics.save(topic);
+    if (previous && previous !== path) await this.videos.remove(previous);
+    await this.audit.record(actor, 'topic.video.set', id, { path });
+    return this.getAny(id, lang);
+  }
+
+  async removeVideo(id: string, actor: Caller, lang: LangContext): Promise<TopicDetailView> {
+    const topic = await this.require(id);
+    if (topic.videoKey) {
+      await this.videos.remove(topic.videoKey);
+      topic.videoKey = null;
+      await this.topics.save(topic);
+    }
+    await this.audit.record(actor, 'topic.video.remove', id, {});
+    return this.getAny(id, lang);
   }
 
   async reorder(ids: readonly string[], actor: Caller, lang: LangContext): Promise<TopicView[]> {
@@ -165,6 +203,12 @@ export class TopicsService {
   async require(id: string): Promise<TopicEntity> {
     const topic = await this.topics.findOneBy({ id });
     if (!topic) throw new NotFoundException('Topic not found');
+    return topic;
+  }
+
+  private async requireMovie(id: string): Promise<TopicEntity> {
+    const topic = await this.require(id);
+    if (topic.kind !== 'movie') throw new BadRequestException('Only movie pages have a video file');
     return topic;
   }
 
@@ -219,6 +263,7 @@ export class TopicsService {
       buyUrl: t.buyUrl,
       buyLabel: textOf(t, 'buyLabel', lang),
       videoUrl: t.videoUrl,
+      videoFile: t.videoKey ? this.videos.url(t.videoKey) : null,
       columns: t.columns,
     };
   }

@@ -345,6 +345,87 @@ describe('text and book topics', () => {
     await waitFor(() => expect(t.videoUrl).toBeNull());
   });
 
+  it('uploads a movie\'s video file straight to storage, then replaces and removes it', async () => {
+    const sent: FakeXhr[] = [];
+    class FakeXhr {
+      method = '';
+      url = '';
+      status = 200;
+      body: unknown = null;
+      upload: { onprogress: ((e: { lengthComputable: boolean; loaded: number; total: number }) => void) | null } = { onprogress: null };
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      open(method: string, url: string): void {
+        this.method = method;
+        this.url = url;
+      }
+      send(body: unknown): void {
+        this.body = body;
+        sent.push(this);
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXhr);
+    const t = server.addTopic('Home movie', 'draft', 0, 'movie');
+    t.videoUrl = 'https://youtu.be/dQw4w9WgXcQ';
+    await openAdmin(`#/admin/topics/${t.id}`);
+    expect(await screen.findByText('No video file yet — the page plays the YouTube link.')).toBeTruthy();
+    const input = (): HTMLElement => screen.getByLabelText('Upload video file');
+
+    // the wrong kind of file, or too large, never leaves the browser
+    fireEvent.change(input(), { target: { files: [new File(['x'], 'clip.avi', { type: 'video/x-msvideo' })] } });
+    expect(screen.getByRole('alert').textContent).toBe('Choose an MP4, WebM or MOV video file.');
+    const huge = new File(['x'], 'big.mp4', { type: 'video/mp4' });
+    Object.defineProperty(huge, 'size', { value: 2 * 1024 ** 3 + 1 });
+    fireEvent.change(input(), { target: { files: [huge] } });
+    expect(screen.getByRole('alert').textContent).toBe('That video is larger than 2 GB.');
+    fireEvent.change(input(), { target: { files: null } });
+    expect(server.videoUploads).toHaveLength(0);
+
+    const movie = new File(['abc'], 'movie.mp4', { type: 'video/mp4' });
+    fireEvent.change(input(), { target: { files: [movie] } });
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(server.videoUploads[0]).toMatchObject({ contentType: 'video/mp4', size: 3, origin: window.location.origin });
+    const xhr = sent[0]!;
+    expect(xhr).toMatchObject({ method: 'PUT', url: `https://upload.test/${server.videoUploads[0]!.path}`, body: movie });
+    act(() => xhr.upload.onprogress?.({ lengthComputable: true, loaded: 1, total: 2 }));
+    expect(screen.getByText('Uploading 50%…')).toBeTruthy();
+    act(() => xhr.upload.onprogress?.({ lengthComputable: false, loaded: 0, total: 0 }));
+    expect(screen.getByText('Uploading 50%…')).toBeTruthy();
+    act(() => xhr.onload?.());
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Video uploaded');
+    expect(t.videoFile).toBe(`https://img.test/${server.videoUploads[0]!.path}`);
+    expect(await screen.findByLabelText('Uploaded video')).toHaveProperty('tagName', 'VIDEO');
+
+    // a failed upload says so and keeps the current file
+    fireEvent.change(screen.getByLabelText('Upload video file'), { target: { files: [movie] } });
+    await waitFor(() => expect(sent).toHaveLength(2));
+    sent[1]!.status = 403;
+    act(() => sent[1]!.onload?.());
+    expect((await screen.findByRole('alert')).textContent).toBe('Video upload failed (403)');
+    fireEvent.change(screen.getByLabelText('Upload video file'), { target: { files: [movie] } });
+    await waitFor(() => expect(sent).toHaveLength(3));
+    act(() => sent[2]!.onerror?.());
+    expect((await screen.findByRole('alert')).textContent).toBe('Video upload failed — check the connection and try again');
+    expect(await screen.findByText('Replace video file')).toBeTruthy();
+
+    confirmSpy.mockReturnValueOnce(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove video file' }));
+    expect(t.videoFile).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove video file' }));
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Video file removed');
+    expect(t.videoFile).toBeNull();
+  });
+
+  it('offers a video file only on movie pages', async () => {
+    const movie = server.addTopic('Home movie', 'draft', 0, 'movie');
+    await openAdmin(`#/admin/topics/${movie.id}`);
+    expect(await screen.findByText('No video file yet.')).toBeTruthy();
+    const text = server.addTopic('Her life', 'draft', 1, 'text');
+    go(`#/admin/topics/${text.id}`);
+    await screen.findByLabelText('Text');
+    expect(screen.queryByLabelText('Upload video file')).toBeNull();
+  });
+
   it('shows the book placeholders for an untranslated, empty book', async () => {
     server.addLanguage('he', 'עברית', 'rtl');
     const t = server.addTopic('Bare', 'draft', 0, 'book');

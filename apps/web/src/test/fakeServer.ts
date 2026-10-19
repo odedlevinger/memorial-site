@@ -18,6 +18,7 @@ interface TopicRow {
   buyUrl: string | null;
   buyLabel: string | null;
   videoUrl: string | null;
+  videoFile: string | null;
   columns: GridColumns;
   status: ContentStatus;
   coverPictureId: string | null;
@@ -55,6 +56,8 @@ export class FakeServer {
   /** Signed-in people per day, oldest first, as GET /activity returns them (last N). */
   activity: Array<{ day: string; count: number }> = [];
   activityPeople = 0;
+  /** Video uploads started (POST video-upload), with what the client sent. */
+  readonly videoUploads: Array<{ path: string; contentType: string; size: number; origin: string }> = [];
   /** "METHOD path" of every request (no query string). */
   readonly calls: string[] = [];
   /** "METHOD path?query" of every request. */
@@ -93,7 +96,7 @@ export class FakeServer {
 
   private newTopic(slug: string, title: string, kind: TopicKind, status: ContentStatus): TopicRow {
     const t: TopicRow = {
-      id: uid(), slug, kind, title, description: null, body: null, details: null, buyUrl: null, buyLabel: null, videoUrl: null, columns: 3,
+      id: uid(), slug, kind, title, description: null, body: null, details: null, buyUrl: null, buyLabel: null, videoUrl: null, videoFile: null, columns: 3,
       status, coverPictureId: null, translations: {},
     };
     this.topics.push(t);
@@ -221,6 +224,18 @@ export class FakeServer {
         return this.json(this.picturesOf(topicId, false).map((x) => this.pictureView(x)));
       }
       return this.json([this.pictureView(this.addPicture(topicId, 'draft'))], 201);
+    }
+    const video = p.match(/^\/topics\/([^/]+)\/(video-upload|video)$/);
+    if (video) {
+      const t = this.topicRow(video[1]!);
+      if (!t) return this.json({ message: 'Topic not found' }, 404);
+      if (video[2] === 'video-upload') {
+        const path = `videos/${uid()}/video.mp4`;
+        this.videoUploads.push({ path, ...body } as { path: string; contentType: string; size: number; origin: string });
+        return this.json({ uploadUrl: `https://upload.test/${path}`, path }, 201);
+      }
+      t.videoFile = method === 'PUT' ? `https://img.test/${String(body['path'])}` : null;
+      return this.json(this.detail(t, false));
     }
     const topic = p.match(/^\/topics\/([^/]+)$/);
     if (topic) {
@@ -358,7 +373,7 @@ export class FakeServer {
   private view(t: TopicRow, publishedOnly: boolean): Topic {
     const pics = this.picturesOf(t.id, publishedOnly);
     const cover = pics.find((x) => x.id === t.coverPictureId) ?? pics[0];
-    const { body: _b, details: _d, buyUrl: _u, buyLabel: _l, videoUrl: _v, columns: _c, ...row } = t;
+    const { body: _b, details: _d, buyUrl: _u, buyLabel: _l, videoUrl: _v, videoFile: _f, columns: _c, ...row } = t;
     return {
       ...row,
       title: this.text(t, 'title', t.title),
@@ -378,6 +393,7 @@ export class FakeServer {
       buyUrl: t.buyUrl,
       buyLabel: this.text(t, 'buyLabel', t.buyLabel),
       videoUrl: t.videoUrl,
+      videoFile: t.videoFile,
       columns: t.columns,
     };
   }

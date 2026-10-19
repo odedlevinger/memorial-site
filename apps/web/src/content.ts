@@ -68,6 +68,8 @@ export interface TopicDetail extends Topic {
   readonly buyLabel: string | null;
   /** Movie pages: the YouTube link. */
   readonly videoUrl: string | null;
+  /** Movie pages: the uploaded video file's URL; played instead of the YouTube link. */
+  readonly videoFile: string | null;
   /** Picture sets: how many pictures are shown in one row. */
   readonly columns: GridColumns;
 }
@@ -121,6 +123,16 @@ export interface Editor {
   readonly addedBy: string | null;
   readonly createdAt: string | null;
 }
+
+/** Where to send a movie's video file, and the path to confirm once it's there. */
+export interface VideoUpload {
+  readonly uploadUrl: string;
+  readonly path: string;
+}
+
+/** Video files a movie page accepts (MP4 plays in every browser). */
+export const VIDEO_FILE_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'] as const;
+export const MAX_VIDEO_BYTES = 2 * 1024 ** 3;
 
 export type TopicPatch = Partial<
   Pick<TopicDetail, 'title' | 'slug' | 'kind' | 'description' | 'body' | 'details' | 'buyUrl' | 'buyLabel' | 'videoUrl' | 'columns' | 'status' | 'coverPictureId'>
@@ -214,6 +226,20 @@ export const contentApi = {
   reorderPictures: (topicId: string, ids: readonly string[]): Promise<Picture[]> =>
     call(`/topics/${topicId}/pictures/order`, json('PUT', { ids })),
 
+  /**
+   * A movie's video file goes straight from the browser to storage (far beyond Cloud Run's
+   * 32 MB request cap): start the upload, send the file, then confirm it.
+   */
+  uploadVideo: async (topicId: string, f: File, onProgress: (fraction: number) => void): Promise<TopicDetail> => {
+    const { uploadUrl, path } = await call<VideoUpload>(
+      `/topics/${topicId}/video-upload`,
+      json('POST', { contentType: f.type, size: f.size, origin: window.location.origin }),
+    );
+    await sendFile(uploadUrl, f, onProgress);
+    return call(`/topics/${topicId}/video`, json('PUT', { path }));
+  },
+  removeVideo: (topicId: string): Promise<TopicDetail> => call(`/topics/${topicId}/video`, { method: 'DELETE' }),
+
   /** Back-office reads: default-language text plus every language's translations. */
   page: (slug: PageSlug): Promise<Page> => call(`/pages/${slug}`),
   site: (): Promise<SiteInfo> => call('/site'),
@@ -236,6 +262,20 @@ export const contentApi = {
   /** Hands ownership to an editor; the caller stays on as an editor. */
   changeOwner: (email: string): Promise<Editor[]> => call('/editors/owner', json('PUT', { email })),
 };
+
+/** PUTs a file to an upload URL, reporting progress (0–1) as it goes. */
+function sendFile(url: string, f: File, onProgress: (fraction: number) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.upload.onprogress = (e): void => {
+      if (e.lengthComputable) onProgress(e.loaded / e.total);
+    };
+    xhr.onload = (): void => (xhr.status < 300 ? resolve() : reject(new ApiError(xhr.status, `Video upload failed (${xhr.status})`)));
+    xhr.onerror = (): void => reject(new ApiError(0, 'Video upload failed — check the connection and try again'));
+    xhr.send(f);
+  });
+}
 
 /** Returns a copy of `list` with the item at `from` moved to `to`. */
 export function move<T>(list: readonly T[], from: number, to: number): T[] {

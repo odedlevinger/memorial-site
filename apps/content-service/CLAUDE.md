@@ -32,9 +32,15 @@ src/
   Every write endpoint is guarded; public reads live only under `/content/public/*`.
 - **Images**: always go through `ImagesService.store` — it validates type/size and
   re-encodes every derivative (drops EXIF/GPS). Never store an upload as-is.
+- **Movie video files** are the exception: too big for Cloud Run's 32 MB request cap, the
+  browser uploads them straight to storage. `POST /content/topics/:id/video-upload` returns a
+  resumable-upload URL (created with the page's `origin`, so storage allows its CORS) and a
+  `videos/<uuid>/video.<ext>` path; the browser PUTs the file there, then
+  `PUT /content/topics/:id/video` confirms it (exists, ≤ 2 GB) and deletes any previous file.
+  They are stored as uploaded (no re-encoding) and served through the same public base.
 - **Page kinds**: a topic is a `pictures` set, a `text` page (body with `## heading`, `> quote`,
   `[photo <id> left|right]` lines) or a `book` (body + `details` + `buyUrl`/`buyLabel`) or a
-  `movie` (`videoUrl`, a YouTube link, + optional body). A picture set's `columns` (1–3, default 3)
+  `movie` (`videoUrl`, a YouTube link, and/or an uploaded video file `videoKey`, + optional body). A picture set's `columns` (1–3, default 3)
   is how many pictures the website shows per row.
 - **Public filtering**: only `published` topics are public; a `pictures` topic also needs ≥ 1
   `published` picture. Only published pictures are ever served publicly.
