@@ -160,7 +160,7 @@ export function youtubeId(url: string): string | null {
   return m ? (m[1] as string) : null;
 }
 
-/** A YouTube movie (privacy-enhanced embed, no cookies until played) with optional text below. */
+/** A YouTube movie (privacy-enhanced embed) that starts playing on arrival, with optional text below. */
 function MovieTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
   const { open, viewer } = useViewer(topic.title, topic.pictures);
   const id = topic.videoUrl ? youtubeId(topic.videoUrl) : null;
@@ -171,7 +171,7 @@ function MovieTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
       {id && (
         <div className="movie-frame">
           <iframe
-            src={`https://www.youtube-nocookie.com/embed/${id}?rel=0`}
+            src={`https://www.youtube-nocookie.com/embed/${id}?rel=0&autoplay=1`}
             title={topic.title}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             referrerPolicy="strict-origin-when-cross-origin"

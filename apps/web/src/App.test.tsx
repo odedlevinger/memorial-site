@@ -286,13 +286,13 @@ describe('text and book pages', () => {
 });
 
 describe('movie pages', () => {
-  it('embeds the YouTube movie with its introduction and text', async () => {
+  it('embeds the YouTube movie, playing on arrival, with its introduction and text', async () => {
     const t = server.addTopic('Home movie', 'published', 0, 'movie');
     Object.assign(t, { description: 'Super 8, 1974', body: 'Filmed in Haifa.', videoUrl: 'https://youtu.be/dQw4w9WgXcQ?si=x' });
     window.location.hash = '#/galleries/home-movie';
     render(<App />);
     const player = (await screen.findByTitle('Home movie')) as HTMLIFrameElement;
-    expect(player.src).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0');
+    expect(player.src).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&autoplay=1');
     expect(screen.getByText('Super 8, 1974')).toBeTruthy();
     expect(screen.getByText('Filmed in Haifa.')).toBeTruthy();
   });
