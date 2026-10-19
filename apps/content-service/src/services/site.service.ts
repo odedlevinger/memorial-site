@@ -18,7 +18,7 @@ export const DEFAULT_SITE: Readonly<Pick<SiteView, 'title' | 'tagline' | 'homeRo
 };
 
 /** Escapes text for an HTML attribute or element body. */
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 

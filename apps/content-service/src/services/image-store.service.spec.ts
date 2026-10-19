@@ -44,4 +44,9 @@ describe('GcsImageStore', () => {
     expect(deleteFiles).toHaveBeenCalledWith({ prefix: 'pictures/a/', force: true });
     expect(store.publicUrl('pictures/a/thumb.jpg')).toBe('https://storage.googleapis.com/photos/pictures/a/thumb.jpg');
   });
+
+  it('builds URLs under a public base (the site\'s /media proxy) when given', () => {
+    const store = new GcsImageStore({} as unknown as Storage, 'photos', 'https://example.org/media/');
+    expect(store.publicUrl('pictures/a/thumb.jpg')).toBe('https://example.org/media/pictures/a/thumb.jpg');
+  });
 });

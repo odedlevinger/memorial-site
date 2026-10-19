@@ -25,6 +25,7 @@ import { IMAGE_STORE } from '../services/image-store.service.js';
 import { ImagesService } from '../services/images.service.js';
 import { PagesService } from '../services/pages.service.js';
 import { SiteService } from '../services/site.service.js';
+import { SiteSummaryService } from '../services/site-summary.service.js';
 import { PicturesService } from '../services/pictures.service.js';
 import { IDENTITY_LOOKUP, RolesService } from '../services/roles.service.js';
 import { TopicsService } from '../services/topics.service.js';
@@ -79,6 +80,7 @@ export async function createHarness(): Promise<Harness> {
       EditorsService,
       PagesService,
       SiteService,
+      SiteSummaryService,
     LanguagesService,
     ActivityService,
     ],

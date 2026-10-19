@@ -28,6 +28,9 @@ env:
   CLOUD_RUN_SERVICE: memorial-site-content     # name expected by infra/terraform/iam.tf invoker binding
   RUNTIME_SA: content-service@lavi-memorial.iam.gserviceaccount.com
   PHOTOS_BUCKET: lavi-memorial-photos          # infra/terraform/storage.tf
+  # Photos load from the site's own domain, not storage.googleapis.com (which corporate
+  # web filters block as "cloud storage"); infra/cloudflare/worker.js proxies /media/*.
+  MEDIA_BASE: https://lavilipshitz.co.il/media
   OWNER_EMAILS: oded.levinger@gmail.com        # SPEC §1 — owners are configuration, not data
   WIF_PROVIDER: projects/630004946962/locations/global/workloadIdentityPools/github-pool/providers/github-provider
   DEPLOY_SA: terraform-runner@lavi-memorial.iam.gserviceaccount.com
@@ -76,5 +79,5 @@ jobs:
             --no-allow-unauthenticated \
             --service-account "$RUNTIME_SA" \
             --add-cloudsql-instances "${GCP_PROJECT_ID}:${GCP_REGION}:my-db" \
-            --set-env-vars "NODE_ENV=production,OWNER_EMAILS=${OWNER_EMAILS},AUTH_SERVICE_URL=${AUTH_URL},AUTH_SERVICE_IAM=true,STORAGE_BUCKET=${PHOTOS_BUCKET},SEED_SOURCE_URL=${WEB_URL}" \
+            --set-env-vars "NODE_ENV=production,OWNER_EMAILS=${OWNER_EMAILS},AUTH_SERVICE_URL=${AUTH_URL},AUTH_SERVICE_IAM=true,STORAGE_BUCKET=${PHOTOS_BUCKET},STORAGE_PUBLIC_BASE=${MEDIA_BASE},SEED_SOURCE_URL=${WEB_URL}" \
             --update-secrets "DATABASE_URL=content-service-database-url:latest,ADMIN_SECRET=auth-service-admin-secret:latest"

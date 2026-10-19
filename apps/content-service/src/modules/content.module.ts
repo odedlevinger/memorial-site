@@ -31,6 +31,7 @@ import { GcsImageStore, IMAGE_STORE, LocalImageStore } from '../services/image-s
 import { ImagesService } from '../services/images.service.js';
 import { PagesService } from '../services/pages.service.js';
 import { SiteService } from '../services/site.service.js';
+import { SiteSummaryService } from '../services/site-summary.service.js';
 import { PicturesService } from '../services/pictures.service.js';
 import { IDENTITY_LOOKUP, RolesService } from '../services/roles.service.js';
 import { SeedService } from '../services/seed.service.js';
@@ -38,10 +39,13 @@ import { TopicsService } from '../services/topics.service.js';
 
 export const ENTITIES = [TopicEntity, PictureEntity, EditorEntity, PageEntity, SiteEntity, LanguageEntity, DailySignInEntity, AuditLogEntity, OwnerEntity];
 
-/** Cloud Storage when STORAGE_BUCKET is set, otherwise a local folder (docker-compose dev). */
+/**
+ * Cloud Storage when STORAGE_BUCKET is set, otherwise a local folder (docker-compose dev).
+ * STORAGE_PUBLIC_BASE is where browsers load the files from, in either case.
+ */
 export function imageStoreFactory(config: ConfigService): ImageStore {
   const bucket = config.get<string>('STORAGE_BUCKET');
-  if (bucket) return new GcsImageStore(new Storage(), bucket);
+  if (bucket) return new GcsImageStore(new Storage(), bucket, config.get<string>('STORAGE_PUBLIC_BASE'));
   return new LocalImageStore(
     config.get<string>('STORAGE_LOCAL_DIR') ?? '/tmp/content-files',
     config.get<string>('STORAGE_PUBLIC_BASE') ?? 'http://localhost:3002/content/files',
@@ -80,6 +84,7 @@ export function typeOrmOptions(config: ConfigService): TypeOrmModuleOptions {
     EditorsService,
     PagesService,
     SiteService,
+    SiteSummaryService,
     LanguagesService,
     ActivityService,
     SeedService,

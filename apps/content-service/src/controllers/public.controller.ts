@@ -11,6 +11,7 @@ import {
 import { LanguagesService } from '../services/languages.service.js';
 import { PagesService } from '../services/pages.service.js';
 import { SiteService } from '../services/site.service.js';
+import { SiteSummaryService } from '../services/site-summary.service.js';
 import { TopicsService } from '../services/topics.service.js';
 
 /**
@@ -24,6 +25,7 @@ export class PublicController {
     private readonly topics: TopicsService,
     private readonly pages: PagesService,
     private readonly site: SiteService,
+    private readonly summary: SiteSummaryService,
     private readonly languages: LanguagesService,
   ) {}
 
@@ -81,6 +83,15 @@ export class PublicController {
   @ApiResponse({ status: 200, description: '<title> plus Open Graph / Twitter card <meta> tags' })
   async getShareMeta(): Promise<string> {
     return this.site.shareMeta(await this.languages.context(undefined, false));
+  }
+
+  @Get('public/site-summary')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  @Header('Cache-Control', 'public, max-age=60')
+  @ApiOperation({ summary: 'The site text (title, tagline, About, gallery list) as plain HTML; the web server includes it in index.html for readers without JavaScript' })
+  @ApiResponse({ status: 200, description: '<main> element with the site text' })
+  async getSiteSummary(): Promise<string> {
+    return this.summary.html(await this.languages.context(undefined, false));
   }
 
   @Get('public/languages')
