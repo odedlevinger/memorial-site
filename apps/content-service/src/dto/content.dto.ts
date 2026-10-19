@@ -25,6 +25,8 @@ import {
   DIRECTIONS,
   GRID_COLUMNS,
   type GridColumns,
+  SITE_FONTS,
+  type SiteFont,
   TOPIC_KINDS,
   type TopicKind,
   VIDEO_TYPES,
@@ -232,6 +234,16 @@ export class UpdateSiteDto {
   @ArrayMaxSize(MAX_HOME_ROWS)
   @IsIn(GRID_COLUMNS, { each: true })
   homeRows?: GridColumns[];
+
+  @ApiPropertyOptional({
+    enum: SITE_FONTS,
+    nullable: true,
+    description: "this language's font for titles and text; null = the built-in serif; unchanged when left out",
+    example: 'Frank Ruhl Libre',
+  })
+  @IsOptional()
+  @IsIn(SITE_FONTS)
+  font?: SiteFont | null;
 }
 
 const LANG_CODE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8}){0,2}$/;

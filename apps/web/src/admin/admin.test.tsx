@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '../App';
 import { publicRetry } from '../content';
+import { fontStack } from '../fonts';
 import { FakeServer } from '../test/fakeServer';
 import { errorText } from './useAsync';
 
@@ -515,10 +516,18 @@ describe('pages', () => {
     const header = screen.getByRole('banner');
     expect(await within(header).findByText('a life in photographs')).toBeTruthy();
     const title = await screen.findByLabelText('Title');
+    const font = screen.getByLabelText('Font') as HTMLSelectElement;
+    expect(font.value).toBe('');
+    expect(Array.from(font.options, (o) => o.value)).toContain('EB Garamond');
+    fireEvent.change(font, { target: { value: 'EB Garamond' } });
+    expect((screen.getByLabelText('Font sample') as HTMLElement).style.fontFamily).toContain('EB Garamond');
     fireEvent.change(title, { target: { value: 'Grandpa Lavi' } });
+    expect(screen.getByLabelText('Font sample').textContent).toBe('Grandpa Lavi');
     fireEvent.change(screen.getByLabelText('Tagline (optional)'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save site settings' }));
     expect(await screen.findByText('Site settings saved')).toBeTruthy();
+    expect(server.site.fonts).toEqual({ en: 'EB Garamond' });
+    await waitFor(() => expect(document.documentElement.style.getPropertyValue('--serif')).toBe(fontStack('EB Garamond')));
     expect(await within(header).findByText('Grandpa Lavi')).toBeTruthy();
     await waitFor(() => expect(document.title).toBe('Grandpa Lavi'));
     expect(within(header).queryByText('a life in photographs')).toBeNull();
@@ -677,6 +686,22 @@ describe('languages', () => {
     expect(server.languages.map((l) => l.code)).toEqual(['he']);
   });
 
+  it('keeps a saved font this language would not offer, and clears it to the built-in serif', async () => {
+    server.addLanguage('he', 'עברית', 'rtl');
+    server.site.fonts = { he: 'Lora' };
+    await openAdmin('#/admin/pages');
+    fireEvent.change(await screen.findByLabelText('Editing language'), { target: { value: 'he' } });
+    const site = screen.getByRole('region', { name: 'Site' });
+    const font = (await within(site).findByLabelText('Font')) as HTMLSelectElement;
+    expect(font.value).toBe('Lora');
+    expect(Array.from(font.options, (o) => o.value).filter((v) => v === 'Lora')).toHaveLength(1);
+    fireEvent.change(font, { target: { value: '' } });
+    expect(within(site).getByLabelText('Font sample').style.fontFamily).not.toContain('Lora');
+    fireEvent.click(within(site).getByRole('button', { name: 'Save site settings' }));
+    expect(await within(site).findByRole('status')).toHaveProperty('textContent', 'Site settings saved');
+    expect(server.site.fonts).toEqual({});
+  });
+
   it('edits topics, pictures, the site title and pages in another language', async () => {
     server.addLanguage('he', 'עברית', 'rtl');
     const t = server.addTopic('Streets', 'published', 0);
@@ -710,10 +735,16 @@ describe('languages', () => {
     const site = screen.getByRole('region', { name: 'Site' });
     const siteTitle = (await within(site).findByLabelText('Title')) as HTMLInputElement;
     expect(siteTitle).toMatchObject({ value: '', placeholder: 'Memory', required: false });
+    const font = within(site).getByLabelText('Font') as HTMLSelectElement;
+    expect(Array.from(font.options, (o) => o.value)).toContain('Frank Ruhl Libre');
+    expect(Array.from(font.options, (o) => o.value)).not.toContain('EB Garamond'); // no Hebrew letters
+    expect(within(site).getByLabelText('Font sample').textContent).toBe('Memory');
+    fireEvent.change(font, { target: { value: 'Frank Ruhl Libre' } });
     fireEvent.change(siteTitle, { target: { value: 'זיכרון' } });
     fireEvent.click(within(site).getByRole('button', { name: 'Save site settings' }));
     expect(await within(site).findByRole('status')).toHaveProperty('textContent', 'Site settings saved');
     expect(server.site.translations).toEqual({ he: { title: 'זיכרון' } });
+    expect(server.site.fonts).toEqual({ he: 'Frank Ruhl Libre' });
 
     const about = (await screen.findByLabelText('About text')) as HTMLTextAreaElement;
     expect(about).toMatchObject({ value: '', placeholder: 'About this site.' });

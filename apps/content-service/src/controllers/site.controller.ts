@@ -21,19 +21,19 @@ export class SiteController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Site title, tagline and home page layout, with every language’s text' })
+  @ApiOperation({ summary: 'Site title, tagline and home page layout, with every language’s text and font' })
   @ApiResponse({ status: 200, description: 'Site settings with translations' })
   async get(): Promise<SiteView> {
     return this.site.get(await this.languages.context(undefined, true), true);
   }
 
   @Put()
-  @ApiOperation({ summary: 'Change the site title and tagline in one language, and the galleries in each home page row' })
+  @ApiOperation({ summary: 'Change the site title, tagline and font in one language, and the galleries in each home page row' })
   @ApiQuery({ name: 'lang', required: false, description: 'language code; defaults to the default language' })
   @ApiResponse({ status: 200, description: 'Updated site settings' })
   @ApiResponse({ status: 400, description: 'Validation error / unknown language' })
   async update(@Body() dto: UpdateSiteDto, @CurrentCaller() caller: Caller, @Query('lang') lang?: string): Promise<SiteView> {
-    return this.site.update(dto.title, dto.tagline, dto.homeRows, caller, await this.languages.context(lang, true));
+    return this.site.update(dto.title, dto.tagline, dto.homeRows, dto.font, caller, await this.languages.context(lang, true));
   }
 
   @Put('share-image')
