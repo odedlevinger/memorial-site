@@ -5,9 +5,11 @@ import { useI18n } from '../i18n';
 // A YouTube movie with only play/pause and full screen. YouTube's own controls are off, a
 // layer over the video takes every click (so hovering never brings up YouTube's title,
 // logo or share buttons), and the frame is cropped so its top and bottom overlays fall
-// outside the visible area. The movie's thumbnail covers the frame until it has played for
-// a moment, hiding YouTube's big play button (shown when the browser blocks autoplay), its
-// loading spinner and the pause icon it flashes in the middle as playback first starts.
+// outside the visible area. The movie's thumbnail covers the frame until it plays, and
+// again once it ends, hiding YouTube's big play button (shown when the browser blocks
+// autoplay, and at the start after the end) and its loading spinner. YouTube still shows
+// its own pause icon in the middle for a few seconds whenever playback starts or resumes;
+// no embed setting turns that off.
 // When the browser blocks autoplay, YouTube's player switches to a mode that shows its own
 // play/pause icon in the middle on every toggle; so the first press of play then reloads
 // the player instead, which autoplays cleanly now that the click allows sound.
@@ -41,8 +43,6 @@ declare global {
 const PLAYING = 1;
 const PAUSED = 2;
 const ENDED = 0;
-/** How long YouTube's start-of-playback icon stays in the middle of the video. */
-const START_FLASH_MS = 1200;
 
 let api: Promise<YouTubeApi> | null = null;
 
@@ -80,6 +80,7 @@ export function MoviePlayer({ id, title }: { readonly id: string; readonly title
             if (e.data === PLAYING) {
               played.current = true;
               setPlaying(true);
+              setStarted(true);
             }
             else if (e.data === PAUSED) setPlaying(false);
             else if (e.data === ENDED) {
@@ -87,6 +88,7 @@ export function MoviePlayer({ id, title }: { readonly id: string; readonly title
               e.target.seekTo(0, true);
               e.target.pauseVideo();
               setPlaying(false);
+              setStarted(false);
             }
           },
         },
@@ -100,12 +102,6 @@ export function MoviePlayer({ id, title }: { readonly id: string; readonly title
       setStarted(false);
     };
   }, [id, attempt]);
-
-  useEffect(() => {
-    if (!playing || started) return;
-    const timer = setTimeout(() => setStarted(true), START_FLASH_MS);
-    return (): void => clearTimeout(timer);
-  }, [playing, started]);
 
   const toggle = (): void => {
     if (!player) return;
@@ -130,7 +126,7 @@ export function MoviePlayer({ id, title }: { readonly id: string; readonly title
         referrerPolicy="strict-origin-when-cross-origin"
         tabIndex={-1}
       />
-      {!started && <img className="movie-poster" src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" />}
+      <img className={`movie-poster${started ? ' gone' : ''}`} src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" />
       <div className="movie-cover" onClick={toggle} aria-hidden="true" />
       {player && (
         <div className="movie-controls">

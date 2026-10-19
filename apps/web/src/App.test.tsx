@@ -297,6 +297,18 @@ describe('movie pages', () => {
     expect(screen.getByText('Filmed in Haifa.')).toBeTruthy();
   });
 
+  it('opens a movie without waiting for the list of galleries', async () => {
+    const t = server.addTopic('Home movie', 'published', 0, 'movie');
+    t.videoUrl = 'https://youtu.be/dQw4w9WgXcQ';
+    const release = server.hold(/GET \/api\/content\/public\/topics$/);
+    window.location.hash = '#/galleries/home-movie';
+    render(<App />);
+    expect(await screen.findByTitle('Home movie')).toBeTruthy();
+    release();
+    const nav = await screen.findByRole('navigation', { name: 'Main' });
+    expect(await within(nav).findByRole('link', { name: 'Home movie' })).toBeTruthy();
+  });
+
   it('shows no player without a usable link', async () => {
     server.addTopic('No link', 'published', 0, 'movie');
     const bad = server.addTopic('Bad link', 'published', 0, 'movie');
