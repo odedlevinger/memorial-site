@@ -2,6 +2,8 @@
 # Deploy: cd infra/cloudflare && npx wrangler@4 login && npx wrangler@4 deploy
 name = "memorial-site-domain"
 main = "worker.js"
+# Cloudflare account that owns the lavilipshitz.co.il zone (Yaakovc@gmail.com's Account).
+account_id = "7743a87dfb739135186e6a2d66c5eb6a"
 compatibility_date = "2026-10-01"
 workers_dev = false
 
