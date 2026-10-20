@@ -64,6 +64,8 @@ export interface TopicDetail extends Topic {
   /** Book pages: "Label: value" lines. */
   readonly details: string | null;
   readonly buyUrl: string | null;
+  /** Book pages: also show the buy link's page inside the book page, in an embedded frame. */
+  readonly buyEmbed: boolean;
   /** Book pages: the buy button's text; null → the site's "Buy" label. */
   readonly buyLabel: string | null;
   /** Movie pages: the YouTube link. */
@@ -139,7 +141,7 @@ export const VIDEO_FILE_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'] a
 export const MAX_VIDEO_BYTES = 2 * 1024 ** 3;
 
 export type TopicPatch = Partial<
-  Pick<TopicDetail, 'title' | 'slug' | 'kind' | 'description' | 'body' | 'details' | 'buyUrl' | 'buyLabel' | 'videoUrl' | 'columns' | 'status' | 'coverPictureId'>
+  Pick<TopicDetail, 'title' | 'slug' | 'kind' | 'description' | 'body' | 'details' | 'buyUrl' | 'buyEmbed' | 'buyLabel' | 'videoUrl' | 'columns' | 'status' | 'coverPictureId'>
 >;
 export type PicturePatch = Partial<Pick<Picture, 'caption' | 'dateText' | 'place' | 'story' | 'status' | 'topicId'>>;
 export type LanguagePatch = Partial<Pick<Language, 'name' | 'direction' | 'labels'>> & { readonly isDefault?: true };

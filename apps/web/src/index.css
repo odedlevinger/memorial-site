@@ -751,6 +751,19 @@ body {
   background: var(--rule);
 }
 
+.admin-form .admin-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  letter-spacing: normal;
+  color: inherit;
+}
+
+.admin .admin-check input {
+  width: auto;
+}
+
 .admin-form .admin-choice label {
   display: flex;
   align-items: center;
@@ -1353,6 +1366,16 @@ button.status {
 
 .buy-button:dir(rtl) {
   letter-spacing: normal;
+}
+
+/* The buy link's page shown inside the book page (topic.buyEmbed). */
+.book-embed {
+  display: block;
+  width: 100%;
+  height: min(80vh, 50rem);
+  margin-top: 2.5rem;
+  border: 1px solid var(--rule);
+  background: #fff;
 }
 
 .book-more {

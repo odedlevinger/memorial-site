@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsEmail,
   IsIn,
   IsInt,
@@ -108,6 +109,11 @@ export class UpdateTopicDto {
   @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
   @MaxLength(500)
   buyUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'book pages: also show the buy link’s page inside the book page, in an embedded frame' })
+  @IsOptional()
+  @IsBoolean()
+  buyEmbed?: boolean;
 
   @ApiPropertyOptional({ maxLength: 60, nullable: true, description: 'book pages: buy button text' })
   @IsOptional()

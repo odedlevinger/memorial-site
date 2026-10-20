@@ -39,7 +39,7 @@ src/
   `PUT /content/topics/:id/video` confirms it (exists, ≤ 2 GB) and deletes any previous file.
   They are stored as uploaded (no re-encoding) and served through the same public base.
 - **Page kinds**: a topic is a `pictures` set, a `text` page (body with `## heading`, `> quote`,
-  `[photo <id> left|right]` lines) or a `book` (body + `details` + `buyUrl`/`buyLabel`) or a
+  `[photo <id> left|right]` lines) or a `book` (body + `details` + `buyUrl`/`buyLabel`, and `buyEmbed`: also show the buy link's page in an embedded frame) or a
   `movie` (`videoUrl`, a YouTube link, and/or an uploaded video file `videoKey`, + optional body). A picture set's `columns` (1–3, default 3)
   is how many pictures the website shows per row.
 - **Public filtering**: only `published` topics are public; a `pictures` topic also needs ≥ 1

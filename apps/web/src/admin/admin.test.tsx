@@ -294,9 +294,13 @@ describe('text and book topics', () => {
     fireEvent.change(screen.getByLabelText('Book details'), { target: { value: 'Pages: 288' } });
     fireEvent.change(screen.getByLabelText('Buy link'), { target: { value: ' https://shop.example/b ' } });
     fireEvent.change(screen.getByLabelText('Buy button text'), { target: { value: 'Order' } });
+    expect(screen.queryByText(/allow being shown inside another site/)).toBeNull();
+    fireEvent.click(screen.getByLabelText('Show the link’s page inside the book page'));
+    expect(screen.getByText(/allow being shown inside another site/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Save topic' }));
     expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Saved');
-    expect(t).toMatchObject({ body: 'A monograph.', details: 'Pages: 288', buyUrl: 'https://shop.example/b', buyLabel: 'Order' });
+    expect(t).toMatchObject({ body: 'A monograph.', details: 'Pages: 288', buyUrl: 'https://shop.example/b', buyEmbed: true, buyLabel: 'Order' });
+    expect((screen.getByLabelText('Show the link’s page inside the book page') as HTMLInputElement).checked).toBe(true);
 
     fireEvent.change(screen.getByLabelText('Editing language'), { target: { value: 'he' } });
     const details = screen.getByLabelText('Book details') as HTMLTextAreaElement;

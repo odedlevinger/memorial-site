@@ -350,17 +350,19 @@ describe('page kinds (text / book / movie)', () => {
     await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ buyUrl: 'not a url' }).expect(400);
     await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ buyLabel: 'x'.repeat(61) }).expect(400);
     await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ details: 'x'.repeat(2001) }).expect(400);
+    await http().patch(`/content/topics/${id}`).set(as(EDITOR)).send({ buyEmbed: 'yes' }).expect(400);
+    expect(book.body).toMatchObject({ buyEmbed: false });
 
     const saved = await http()
       .patch(`/content/topics/${id}`)
       .set(as(EDITOR))
-      .send({ body: 'About the book', details: 'Pages: 288\nISBN: 123', buyUrl: 'https://shop.example/book', buyLabel: 'Buy', status: 'published' })
+      .send({ body: 'About the book', details: 'Pages: 288\nISBN: 123', buyUrl: 'https://shop.example/book', buyEmbed: true, buyLabel: 'Buy', status: 'published' })
       .expect(200);
-    expect(saved.body).toMatchObject({ kind: 'book', details: 'Pages: 288\nISBN: 123', buyUrl: 'https://shop.example/book', buyLabel: 'Buy' });
+    expect(saved.body).toMatchObject({ kind: 'book', details: 'Pages: 288\nISBN: 123', buyUrl: 'https://shop.example/book', buyEmbed: true, buyLabel: 'Buy' });
     await http().patch(`/content/topics/${id}?lang=he`).set(as(EDITOR)).send({ details: 'עמודים: 288', buyLabel: 'לקנייה' }).expect(200);
 
     const he = await http().get('/content/public/topics/the-book?lang=he').expect(200);
-    expect(he.body).toMatchObject({ body: 'About the book', details: 'עמודים: 288', buyLabel: 'לקנייה', buyUrl: 'https://shop.example/book' });
+    expect(he.body).toMatchObject({ body: 'About the book', details: 'עמודים: 288', buyLabel: 'לקנייה', buyUrl: 'https://shop.example/book', buyEmbed: true });
 
     // switching the default language carries the book fields along
     await http().patch('/content/languages/he').set(as(EDITOR)).send({ isDefault: true }).expect(200);

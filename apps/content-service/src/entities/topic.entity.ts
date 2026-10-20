@@ -32,6 +32,10 @@ export class TopicEntity {
   @Column({ type: 'varchar', length: 500, nullable: true })
   buyUrl!: string | null;
 
+  /** Book pages: also show the buy link's page inside the book page, in an embedded frame. */
+  @Column({ type: 'boolean', default: false })
+  buyEmbed!: boolean;
+
   /** Book pages: the buy button's text (the site's own label when empty). */
   @Column({ type: 'varchar', length: 60, nullable: true })
   buyLabel!: string | null;
