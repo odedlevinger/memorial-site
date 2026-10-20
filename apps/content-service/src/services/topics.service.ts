@@ -98,6 +98,7 @@ export class TopicsService {
         body: null,
         details: null,
         buyUrl: null,
+        buyEmbed: false,
         buyLabel: null,
         videoUrl: null,
         videoKey: null,
@@ -132,6 +133,7 @@ export class TopicsService {
     if (dto.details !== undefined) setText(topic, 'details', dto.details, lang);
     if (dto.buyLabel !== undefined) setText(topic, 'buyLabel', dto.buyLabel, lang);
     if (dto.buyUrl !== undefined) topic.buyUrl = dto.buyUrl;
+    if (dto.buyEmbed !== undefined) topic.buyEmbed = dto.buyEmbed;
     if (dto.videoUrl !== undefined) topic.videoUrl = dto.videoUrl;
     if (dto.columns !== undefined) topic.columns = dto.columns;
     if (dto.kind !== undefined) topic.kind = dto.kind;
@@ -261,6 +263,7 @@ export class TopicsService {
       body: textOf(t, 'body', lang),
       details: textOf(t, 'details', lang),
       buyUrl: t.buyUrl,
+      buyEmbed: t.buyEmbed,
       buyLabel: textOf(t, 'buyLabel', lang),
       videoUrl: t.videoUrl,
       videoFile: t.videoKey ? this.videos.url(t.videoKey) : null,

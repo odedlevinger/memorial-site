@@ -80,6 +80,8 @@ export interface TopicDetailView extends TopicView {
   /** Book pages: "Label: value" lines. */
   readonly details: string | null;
   readonly buyUrl: string | null;
+  /** Book pages: also show the buy link's page inside the book page, in an embedded frame. */
+  readonly buyEmbed: boolean;
   readonly buyLabel: string | null;
   /** Movie pages: the YouTube link (watch, youtu.be, shorts or embed). */
   readonly videoUrl: string | null;

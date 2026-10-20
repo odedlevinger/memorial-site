@@ -16,6 +16,7 @@ interface TopicRow {
   body: string | null;
   details: string | null;
   buyUrl: string | null;
+  buyEmbed: boolean;
   buyLabel: string | null;
   videoUrl: string | null;
   videoFile: string | null;
@@ -98,7 +99,7 @@ export class FakeServer {
 
   private newTopic(slug: string, title: string, kind: TopicKind, status: ContentStatus): TopicRow {
     const t: TopicRow = {
-      id: uid(), slug, kind, title, description: null, body: null, details: null, buyUrl: null, buyLabel: null, videoUrl: null, videoFile: null, columns: 3,
+      id: uid(), slug, kind, title, description: null, body: null, details: null, buyUrl: null, buyEmbed: false, buyLabel: null, videoUrl: null, videoFile: null, columns: 3,
       status, coverPictureId: null, translations: {},
     };
     this.topics.push(t);
@@ -386,7 +387,7 @@ export class FakeServer {
   private view(t: TopicRow, publishedOnly: boolean): Topic {
     const pics = this.picturesOf(t.id, publishedOnly);
     const cover = pics.find((x) => x.id === t.coverPictureId) ?? pics[0];
-    const { body: _b, details: _d, buyUrl: _u, buyLabel: _l, videoUrl: _v, videoFile: _f, columns: _c, ...row } = t;
+    const { body: _b, details: _d, buyUrl: _u, buyEmbed: _e, buyLabel: _l, videoUrl: _v, videoFile: _f, columns: _c, ...row } = t;
     return {
       ...row,
       title: this.text(t, 'title', t.title),
@@ -404,6 +405,7 @@ export class FakeServer {
       body: this.text(t, 'body', t.body),
       details: this.text(t, 'details', t.details),
       buyUrl: t.buyUrl,
+      buyEmbed: t.buyEmbed,
       buyLabel: this.text(t, 'buyLabel', t.buyLabel),
       videoUrl: t.videoUrl,
       videoFile: t.videoFile,

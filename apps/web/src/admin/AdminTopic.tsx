@@ -36,6 +36,7 @@ interface Fields {
   body: string;
   details: string;
   buyUrl: string;
+  buyEmbed: boolean;
   buyLabel: string;
   videoUrl: string;
   columns: GridColumns;
@@ -50,6 +51,7 @@ const fieldsOf = (t: TopicDetail, lang: Language): Fields => ({
   body: textIn(t, 'body', t.body, lang),
   details: textIn(t, 'details', t.details, lang),
   buyUrl: t.buyUrl ?? '',
+  buyEmbed: t.buyEmbed,
   buyLabel: textIn(t, 'buyLabel', t.buyLabel, lang),
   videoUrl: t.videoUrl ?? '',
   columns: t.columns,
@@ -113,7 +115,7 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
           kind: fields.kind,
           description: fields.description || null,
           ...(fields.kind !== 'pictures' ? { body: orNull(fields.body) } : {}),
-          ...(book ? { details: orNull(fields.details), buyUrl: fields.buyUrl.trim() || null, buyLabel: orNull(fields.buyLabel) } : {}),
+          ...(book ? { details: orNull(fields.details), buyUrl: fields.buyUrl.trim() || null, buyEmbed: fields.buyEmbed, buyLabel: orNull(fields.buyLabel) } : {}),
           ...(fields.kind === 'movie' ? { videoUrl: fields.videoUrl.trim() || null } : {}),
           ...(fields.kind === 'pictures' ? { columns: fields.columns } : {}),
           status: fields.status,
@@ -236,6 +238,13 @@ export function AdminTopic({ id, lang, onChanged }: AdminTopicProps): ReactEleme
             <FormattedTextarea label="Book details" value={fields.details} maxLength={2000} rows={6} placeholder={hint(t.details) ?? 'Author: …\nPublisher: …\nPages: …\nISBN: …'} {...inputLang(lang)} onChange={(v): void => set('details', v)} />
             <p className="admin-help">One “Label: value” per line. The cover picture is shown as the book’s cover.</p>
             <label>Buy link<input type="url" value={fields.buyUrl} maxLength={500} placeholder="https://…" onChange={(e): void => set('buyUrl', e.target.value)} /></label>
+            <label className="admin-check">
+              <input type="checkbox" checked={fields.buyEmbed} onChange={(e): void => set('buyEmbed', e.target.checked)} />
+              Show the link’s page inside the book page
+            </label>
+            {fields.buyEmbed && (
+              <p className="admin-help">Some sites don’t allow being shown inside another site — check the published page. The buy button stays as well.</p>
+            )}
             <label>Buy button text<input value={fields.buyLabel} maxLength={60} placeholder={hint(t.buyLabel) ?? 'Buy'} {...inputLang(lang)} onChange={(e): void => set('buyLabel', e.target.value)} /></label>
           </>
         )}

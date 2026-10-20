@@ -94,7 +94,10 @@ function TextTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
   );
 }
 
-/** A book: its cover, title, text, a details table and any other photographs, with a buy button above and below. */
+/**
+ * A book: its cover, title, text, a details table, the buy link's page in a frame (when chosen)
+ * and any other photographs, with a buy button above and below.
+ */
 function BookTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
   const { t } = useI18n();
   const { open, viewer } = useViewer(topic.title, topic.pictures);
@@ -138,6 +141,9 @@ function BookTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
           ))}
         </dl>
       )}
+      {topic.buyEmbed && topic.buyUrl && (
+        <iframe className="book-embed" src={topic.buyUrl} title={topic.buyLabel || t('book.buy')} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" />
+      )}
       {more.length > 0 && (
         <ul className="book-more">
           {more.map((p) => (
@@ -150,7 +156,7 @@ function BookTopic({ topic }: { readonly topic: TopicDetail }): ReactElement {
         </ul>
       )}
       {/* Repeated at the end, unless nothing sits between it and the one at the top. */}
-      {(topic.body || details.length > 0 || more.length > 0) && buy}
+      {(topic.body || details.length > 0 || more.length > 0 || topic.buyEmbed) && buy}
       {viewer}
     </article>
   );

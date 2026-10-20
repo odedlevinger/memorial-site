@@ -271,7 +271,27 @@ describe('text and book pages', () => {
     render(<App />);
     expect(await screen.findByRole('link', { name: 'Order now' })).toBeTruthy();
     expect(screen.getAllByRole('link', { name: 'Order now' })).toHaveLength(1); // nothing between top and bottom
-    expect(document.querySelector('.book-cover, .book-details, .book-more, .rich-text')).toBeNull();
+    expect(document.querySelector('.book-cover, .book-details, .book-more, .rich-text, .book-embed')).toBeNull();
+  });
+
+  it('shows the buy link’s page in a frame when chosen, with a buy button above and below', async () => {
+    const t = server.addTopic('Framed', 'published', 0, 'book');
+    Object.assign(t, { buyUrl: 'https://shop.example/framed', buyEmbed: true });
+    window.location.hash = '#/galleries/framed';
+    render(<App />);
+    const frame = (await screen.findByTitle('Buy')) as HTMLIFrameElement;
+    expect(frame.tagName).toBe('IFRAME');
+    expect(frame.getAttribute('src')).toBe('https://shop.example/framed');
+    expect(screen.getAllByRole('link', { name: 'Buy' })).toHaveLength(2);
+  });
+
+  it('shows no frame for a book with the frame chosen but no buy link', async () => {
+    const t = server.addTopic('No link', 'published', 0, 'book');
+    t.buyEmbed = true;
+    window.location.hash = '#/galleries/no-link';
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'No link' })).toBeTruthy();
+    expect(document.querySelector('.book-embed')).toBeNull();
   });
 
   it('shows a book with one picture and no buy link', async () => {
